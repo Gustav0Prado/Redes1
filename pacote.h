@@ -4,3 +4,6 @@ typedef struct pacote{
     unsigned char sequencia : 6;        // 6 bits de tamanho
     unsigned char tipo : 4;             // 4 bits de tipo
 } pacote_t;
+
+void enviaArquivo(char *arquivo);
+void escreveParte(char *arquivo, unsigned char *dados, int tamanho);
