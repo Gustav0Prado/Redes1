@@ -4,11 +4,14 @@ all : main
 
 CFLAGS = -Wall -g
 
-main: socket.o main.c
-	gcc -o main main.c socket.o $(CFLAGS)
+main: socket.o comandos.o main.c
+	gcc -o main main.c socket.o comandos.o $(CFLAGS)
 
 socket.o: socket.c
 	gcc -c socket.c $(CFLAGS)
+
+comandos.o: comandos.c
+	gcc -c comandos.c $(CFLAGS)
 
 clean:
 	rm -rf ./*.o ./main

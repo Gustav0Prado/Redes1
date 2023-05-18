@@ -3,14 +3,18 @@
 #include <string.h>
 #include <sys/socket.h>
 #include "socket.h"
+#include "comandos.h"
 
 int main(){
    int servidor;
    unsigned char msg[256];
    unsigned char rcve[256];
+   char entrada[1024];
+   char delimitador[3] = " \n";
+   char *token;
    char lixo;
 
-   int socket = ConexaoRawSocket("enp0s31f6");
+   int socket = ConexaoRawSocket("eno1");
 
    printf("0 - Cliente\n1 - Servidor\n");
    scanf("%d", &servidor);
@@ -28,8 +32,17 @@ int main(){
    }
    else{
       while(1){
-         fgets((char *)msg, 256, stdin);
-         send(socket, msg, 256, 0);
+         fgets(entrada, 1024, stdin);
+         token = strtok(entrada, delimitador);
+         switch (codigoComando(token)){
+         case CDLOCAL:
+            token = strtok(NULL, delimitador);
+            cdLocal(token);
+            break;
+         
+         default:
+            break;
+         }
       }
    }
 }
