@@ -26,6 +26,8 @@ void enviaArquivo(char *arquivo){
         fread(buff, sizeof(unsigned char), 63, arq);
     }
     fread(buff, sizeof(unsigned char), tamanho%63, arq);
+
+    fclose(arq);
 }
 
 /**
@@ -38,10 +40,10 @@ void enviaArquivo(char *arquivo){
 void escreveParte(char *arquivo, unsigned char *dados, int tamanho){
     FILE* arq;
 
-    // Remove arquivo caso já exista
-    if(access(arquivo, F_OK) == 0){
-        remove(arquivo);
-    }
+    // Remove arquivo caso já exista => Como faz parte do arquivo, acaba deletando ele sempre
+    //if(access(arquivo, F_OK) == 0){
+    //    remove(arquivo);
+    //}
 
     // Cria novo arquivo em modo append, para acumular os dados dos pacotes
     arq = fopen(arquivo, "a");
@@ -51,4 +53,6 @@ void escreveParte(char *arquivo, unsigned char *dados, int tamanho){
 
     // Escreve dados no arquivo
     fwrite(dados, sizeof(unsigned char), tamanho, arq);
+
+    fclose(arq);
 }
