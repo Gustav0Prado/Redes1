@@ -4,12 +4,14 @@
 #include <sys/socket.h>
 #include "socket.h"
 #include "comandos.h"
+#include "pacote.h"
 
 int main(int argc, char **argv){
    int servidor;
+   int sequencia = 0;
    unsigned char msg[256];
    unsigned char rcve[256];
-   char entrada[1024];
+   char entrada[256];
    char delimitador[3] = " \n";
    char *token;
    char lixo;
@@ -47,17 +49,23 @@ int main(int argc, char **argv){
 
    if(servidor){
       while(1){
-         if(recv(socket, rcve, 256, 0) != -1){
-            printf("%s", rcve);
+         if(recv(socket, rcve, 256, 0) > 0){
+            printf("\tRecebeu mensagem: %s", rcve);
             memset(rcve, 0, 256);
          }
       }
    }
    else{
       while(1){
-         fgets(entrada, 1024, stdin);
+         fgets(entrada, 256, stdin);
          token = strtok(entrada, delimitador);
-         int codigo = codigoComando(token);
+
+         int codigo;
+         if(token)
+            codigo = codigoComando(token);
+         else
+            codigo = -1;
+
          token = strtok(NULL, delimitador);
 
          switch (codigo){
@@ -71,6 +79,10 @@ int main(int argc, char **argv){
 
             case BACKUP_VARIOS:
                backupVariosArquivo(token);
+               break;
+
+            case LS:
+               system("ls");
                break;
 
             default:
