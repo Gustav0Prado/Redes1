@@ -1,28 +1,56 @@
 #!/usr/bin/python3
 
 import socket
+import sys, termios
 
-class Maquina:
-   def __init__(self, ip, porta):
-      self.ip = ip
-      self.porta = porta
-   
-   def proximaMaq(self):
+ips = []
+portas = []
+bastao = 0
 
-conexoes = []
+# Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
 with open("conf.txt") as f:
-   qtdMaquinas = int(f.readline())
+   qtd = int(f.readline())
    while True:
       line = f.readline()
       if not line:
          break
 
       entrada = line.split()
-      ip = entrada[0]
-      porta = entrada[1]
+      ips.append(entrada[0])
+      portas.append(entrada[1])
 
-      conexoes.append(ip)
-      conexoes.append(porta)
-   print(conexoes)
+hostId = ips.index(socket.gethostname())
 
-IpAtual = socket.gethostbyname(socket.gethostname())
+# Escuta pacotes vindos do nó anterior na porta atual
+l = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+l.bind( (socket.gethostbyname(ips[hostId]), int(portas[hostId])) )
+print("Listening on ", portas[hostId])
+
+# Envia pacotes para o próximo nó
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+print("Sending to", ips[ (hostId+1) % qtd ], "on port", portas[ (hostId+1) % qtd ])
+
+# Primeira maquina do arquivo começa com o bastão
+if(hostId == 0):
+    bastao = True
+
+while(True):
+    # Se tiver o bastão, envia mensagem, espera receber de volta e passa o bastão pra frente
+    if(bastao):
+        termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+        send_data = input("\t>>> Você possui o bastao, envie uma mensagem: ")
+        s.sendto(send_data.encode(), (ips[ (hostId+1) % qtd  ], int(portas[ (hostId+1) % qtd ])) )
+
+        rec_data, addr = l.recvfrom(1024)
+
+        s.sendto(b'b', (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
+        bastao = False
+    # Se nao tiver o bastao espera uma mensagem
+    else:
+        print("\tVocê nao possui o bastao, aguarde uma mensagem")
+        rec_data, addr = l.recvfrom(1024)
+        if(rec_data.decode() == 'b'):
+           bastao = True
+        else:
+            print("Mensagem recebida: ", rec_data.decode())
+            s.sendto(rec_data, (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
