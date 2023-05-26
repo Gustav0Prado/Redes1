@@ -82,7 +82,7 @@ int main(int argc, char **argv){
                break;
 
             case LS:
-               system("ls");
+               system("ll");
                break;
 
             default:
