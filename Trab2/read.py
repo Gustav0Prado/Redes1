@@ -53,12 +53,15 @@ def the_deal(deck, playersNum, sender, listener):
             return
          
          card = deck.pop()
+         print(f"Card = {card}")
 
          if (i == hostId):
+            print(f"Appended card {card}")
             personalDeck.append(card)
          else:
             # cd == card deal
             send(f"({hostId}cd{i}{card}0)", playersNum, sender, listener)
+            print(f"Sent card to {i}")
 
 
 def check_confirm(message, playersNum):
@@ -130,6 +133,7 @@ def receive (sender, listener, playersNum):
       # card deal
       elif(rec_msg.tipo == "cd"):
          if(rec_msg.jogada[0] == hostId):
+            print(f"Received card {rec_msg.jogada[1:-1]}")
             personalDeck.append(rec_msg.jogada[1:-1])
 
          flip_bit(rec_msg.confirmacao, hostId)
