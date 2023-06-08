@@ -121,7 +121,7 @@ def send (message, playersNum, sender, listener):
          print ("confirmation antes é " + confirmation)
          confirmation = flip_bit(confirmation, hostId)
          
-         print ("confirmation depois é " + bin(confirmation))
+         print ("confirmation depois é " + confirmation)
          rec_aux = rec_data[:-9] + confirmation + rec_data[-1] 
 
          check = check_confirm(rec_aux, playersNum)
