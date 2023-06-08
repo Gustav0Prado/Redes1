@@ -6,9 +6,21 @@ import random
 
 ips = []
 portas = []
-bastao = 0
 personalDeck = []
+bastao = False
 hostId = ips.index(socket.gethostname())
+
+class Mensagem:
+  def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
+      self.inicio = inicio
+      self.origem = origem
+      self.tipo = tipo
+      self.jogada = jogada
+      self.confirmacao = confirmacao
+      self.fim = fim
+      return
+  def __str__(self):
+     return self.inicio + str(self.origem) + self.tipo + str(self.jogada) + str(self.confirmacao) + self.fim
 
 
 def init_deck (deck):
@@ -27,7 +39,7 @@ def init_deck (deck):
    random.shuffle(deck)
 
 
-def the_deal(deck, playersNum):
+def the_deal(deck, playersNum, sender, listener):
    """Cartear baralho
 
    Args:
@@ -45,7 +57,8 @@ def the_deal(deck, playersNum):
          if (i == hostId):
             personalDeck.append(card)
          else:
-            send("()")
+            # cd == card deal
+            send(f"({hostId}cd{i}{card}0)", playersNum, sender, listener)
 
 
 def check_confirm(message, playersNum):
@@ -56,7 +69,7 @@ def check_confirm(message, playersNum):
       playersNum (int): Quantidade de jogadores na partida
 
    Returns:
-      Bool: True caso correto ou False caso haja erro
+      bool: True caso correto ou False caso haja erro
    """
    
    confirm = message[-2]
@@ -84,59 +97,115 @@ def flip_bit(value, n):
     
 
 
-def send (message):
-   s.sendto(message.encode(), (ips[ (hostId+1) % qtd  ], int(portas[ (hostId+1) % qtd ])) )
-   rec_data, addr = listen.recvfrom(1024)
-   check_confirm(rec_data)
+def send (message, playerNum, sender, listener):
+   """Envia mensagem pelo anel até receber de volta e confirmar o recebimento
+
+   Args:
+       message (string): Mensagem a ser enviada
+       playerNum (int): Número de jogadores
+       sender (socket): Socket de envio
+       listener (socket): Socket local de recebimento
+   """
+   check = False
+   i = 0
+   while(check == False and i < 100):
+      sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
+      rec_data, addr = listener.recvfrom(1024)
+      check = check_confirm(rec_data)
+      i += 1
+   # não confirmou recebimento da mensagem
+   assert i < 100
+
+def receive (sender, listener, playersNum):
+   global bastao
+
+   rec_data, addr = listener.recvfrom(1024)
+   rec_data = rec_data.decode()
+   rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:3], rec_data[4:-2], int(rec_data[-2]), rec_data[-1])
+
+   if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
+      # token pass
+      if(rec_msg.tipo   == "tp"):
+         bastao = True
+      # card deal
+      elif(rec_msg.tipo == "cd"):
+         if(rec_msg.jogada[0] == hostId):
+            personalDeck.append(rec_msg.jogada[1:-1])
+
+         flip_bit(rec_msg.confirmacao, hostId)
+         send(str(rec_msg).encode(), playersNum, sender, listener)
+      # hand discard
+      elif(rec_msg.tipo == "hd"):
 
 
+         flip_bit(rec_msg.confirmacao, hostId)
+         send(str(rec_msg).encode(), playersNum, sender, listener)
+      # simple pass
+      elif(rec_msg.tipo == "sp"):
 
 
-# Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
-with open("conf.txt") as f:
-   qtd = int(f.readline())
-   while True:
-      line = f.readline()
-      if not line:
-         break
+         flip_bit(rec_msg.confirmacao, hostId)
+         send(str(rec_msg).encode(), playersNum, sender, listener)
 
-      entrada = line.split()
-      ips.append(entrada[0])
-      portas.append(entrada[1])
+def main():
+   # Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
+   with open("conf.txt") as f:
+      qtd = int(f.readline())
+      while True:
+         line = f.readline()
+         if not line:
+            break
 
-hostId = ips.index(socket.gethostname())
+         entrada = line.split()
+         ips.append(entrada[0])
+         portas.append(entrada[1])
 
-# Escuta pacotes vindos do nó anterior na porta atual
-listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-listen.bind( (socket.gethostbyname(ips[hostId]), int(portas[hostId])) )
-print("Listening on ", portas[hostId])
+   hostId = ips.index(socket.gethostname())
 
-# Envia pacotes para o próximo nó
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-print("Sending to", ips[ (hostId+1) % qtd ], "on port", portas[ (hostId+1) % qtd ])
+   # Escuta pacotes vindos do nó anterior na porta atual
+   listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+   listen.bind( (socket.gethostbyname(ips[hostId]), int(portas[hostId])) )
+   print("Listening on ", portas[hostId])
 
-# Primeira maquina do arquivo começa com o bastão
-if(hostId == 0):
-    bastao = True
+   # Envia pacotes para o próximo nó
+   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+   print("Sending to", ips[ (hostId+1) % qtd ], "on port", portas[ (hostId+1) % qtd ])
 
-while(True):
-    # Se tiver o bastão, envia mensagem, espera receber de volta e passa o bastão pra frente
-    if(bastao):
-        termios.tcflush(sys.stdin, termios.TCIOFLUSH)
-        send_data = input("\t>>> Você possui o bastao, envie uma mensagem: ")
-        s.sendto(send_data.encode(), (ips[ (hostId+1) % qtd  ], int(portas[ (hostId+1) % qtd ])) )
+   # Primeira maquina do arquivo começa com o bastão
+   if(hostId == 0):
+      bastao = True
 
-        rec_data, addr = listen.recvfrom(1024)
+   #while(True):
+      # # Se tiver o bastão, envia mensagem, espera receber de volta e passa o bastão pra frente
+      # if(bastao):
+      #    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+      #    send_data = input("\t>>> Você possui o bastao, envie uma mensagem: ")
+      #    s.sendto(send_data.encode(), (ips[ (hostId+1) % qtd  ], int(portas[ (hostId+1) % qtd ])) )
 
-        s.sendto(b'b', (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
-        bastao = False
-    # Se nao tiver o bastao espera uma mensagem
-    else:
-        print("\tVocê nao possui o bastao, aguarde uma mensagem")
-        rec_data, addr = listen.recvfrom(1024)
-        if(rec_data.decode() == 'b'):
-           bastao = True
-        else:
-            print("Mensagem recebida: ", rec_data.decode())
-            s.sendto(rec_data, (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
+      #    rec_data, addr = listen.recvfrom(1024)
+
+      #    s.sendto(b'b', (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
+      #    bastao = False
+      # # Se nao tiver o bastao espera uma mensagem
+      # else:
+      #    print("\tVocê nao possui o bastao, aguarde uma mensagem")
+      #    rec_data, addr = listen.recvfrom(1024)
+      #    if(rec_data.decode() == 'b'):
+      #       bastao = True
+      #    else:
+      #          print("Mensagem recebida: ", rec_data.decode())
+      #          s.sendto(rec_data, (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
+   
+   
+   if(hostId == 0):
+      deck = []
+      init_deck(deck)
+      the_deal(deck, qtd, s, listen)
+   else:
+      while(len(personalDeck) < 40):
+         receive(s, listen, qtd)
+
+   
+   print(len(personalDeck))
+   print(personalDeck)
 
