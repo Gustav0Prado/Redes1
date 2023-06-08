@@ -72,7 +72,7 @@ def check_confirm(message, playersNum):
       bool: True caso correto ou False caso haja erro
    """
    
-   confirm = message[-2]
+   confirm = int(message[-2])
    if (bin(confirm).count("1") != playersNum):
       return False
    return True
@@ -89,7 +89,6 @@ def flip_bit(value, n):
    Returns:
       int: Valor com bit já flipado
    """
-
    val_bin = bin(value)[2:].zfill(8)
    if (val_bin[n] == '0'):
       return value | (1 << n)
@@ -116,8 +115,14 @@ def send (message, playersNum, sender, listener):
          sender.sendto(message.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
          rec_data, addr = listener.recvfrom(1024)
 
-         flip_bit(int(rec_data[-2]), hostId)
-         check = check_confirm(rec_data, playersNum)
+         rec_data = rec_data.decode()
+         print( "rec_data é" + rec_data)
+         confirmation = int(rec_data[-2])
+         print ("confirmation antes é " + bin(confirmation))
+         confirmation = flip_bit(confirmation, hostId)
+         print ("confirmation depois é " + bin(confirmation))
+         rec_aux = rec_data[:-2] + str(confirmation) + rec_data[-1] 
+         check = check_confirm(rec_aux, playersNum)
          if not check:
             flip_bit(int(rec_data[-2]), hostId)
             print("Mensagem não recebida, mandando novamente")
