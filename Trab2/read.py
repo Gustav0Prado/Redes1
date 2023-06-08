@@ -152,7 +152,7 @@ def receive (sender, listener, playersNum):
       # card deal
       elif(rec_msg.tipo == "cd"):
          if(int(rec_msg.jogada[0]) == hostId):
-            personalDeck.append(int(rec_msg.jogada[1:]))
+            personalDeck.append(int(rec_msg.jogada[1:-1]))
 
          rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
          print(bin(rec_msg.confirmacao)[2:].zfill(8))
