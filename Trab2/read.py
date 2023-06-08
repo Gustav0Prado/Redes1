@@ -47,16 +47,16 @@ def the_deal(deck, playersNum, sender, listener):
       playersNum (int): Quantidade de jogadores na partida
    """
    card = 0
-   #while (len(deck) > 0):
-   for i in range (playersNum):
-      if (len(deck) < 0):
-         return
+   while (len(deck) > 0):
+       for i in range (playersNum):
+           if (len(deck) < 0):
+               return
       
-      card = deck.pop()
+       card = deck.pop()
 
-      if (i == hostId):
-         personalDeck.append(card)
-      else:
+       if (i == hostId):
+           personalDeck.append(card)
+       else:
          # cd == card deal
          send(f"({hostId}cd{i}{card}/0)", playersNum, sender, listener)
 
@@ -230,8 +230,7 @@ def main():
          valorWhile =  (80 // playersNum) + 1
       else:
          valorWhile =  80//playersNum
-      #while(len(personalDeck) < valorWhile):
-      for i in range(3):
+      while(len(personalDeck) < valorWhile):
          receive(s, listen, playersNum)
    
    print(personalDeck)
