@@ -98,12 +98,12 @@ def flip_bit(value, n):
     
 
 
-def send (message, playerNum, sender, listener):
+def send (message, playersNum, sender, listener):
    """Envia mensagem pelo anel até receber de volta e confirmar o recebimento
 
    Args:
        message (string): Mensagem a ser enviada
-       playerNum (int): Número de jogadores
+       playersNum (int): Número de jogadores
        sender (socket): Socket de envio
        listener (socket): Socket local de recebimento
    """
@@ -114,11 +114,11 @@ def send (message, playerNum, sender, listener):
    print (bastao)
    if bastao:
       while(check == False and i < 100):
-         sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
+         sender.sendto(message.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
          rec_data, addr = listener.recvfrom(1024)
 
          flip_bit(int(rec_data[-2]), hostId)
-         check = check_confirm(rec_data, playerNum)
+         check = check_confirm(rec_data, playersNum)
          if not check:
             flip_bit(int(rec_data[-2]), hostId)
             print("Mensagem não recebida, mandando novamente")
@@ -127,7 +127,7 @@ def send (message, playerNum, sender, listener):
       assert i < 100
    # sem bastao, só repassa a mensagem
    else:
-      sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
+      sender.sendto(message.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
 
 def receive (sender, listener, playersNum):
    global bastao
@@ -159,9 +159,10 @@ def receive (sender, listener, playersNum):
 
 def main():
    global hostId
+
    # Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
    with open("conf.txt") as f:
-      qtd = int(f.readline())
+      playersNum = int(f.readline())
       while True:
          line = f.readline()
          if not line:
@@ -181,7 +182,7 @@ def main():
 
    # Envia pacotes para o próximo nó
    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-   print("Sending to", ips[ (hostId+1) % qtd ], "on port", portas[ (hostId+1) % qtd ])
+   print("Sending to", ips[ (hostId+1) % playersNum ], "on port", portas[ (hostId+1) % playersNum ])
 
    # Primeira maquina do arquivo começa com o bastão
    global bastao
@@ -193,11 +194,11 @@ def main():
       # if(bastao):
       #    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
       #    send_data = input("\t>>> Você possui o bastao, envie uma mensagem: ")
-      #    s.sendto(send_data.encode(), (ips[ (hostId+1) % qtd  ], int(portas[ (hostId+1) % qtd ])) )
+      #    s.sendto(send_data.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
 
       #    rec_data, addr = listen.recvfrom(1024)
 
-      #    s.sendto(b'b', (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
+      #    s.sendto(b'b', (ips[ (hostId+1) % playersNum   ], int(portas[ (hostId+1) % playersNum ])) )
       #    bastao = False
       # # Se nao tiver o bastao espera uma mensagem
       # else:
@@ -207,16 +208,20 @@ def main():
       #       bastao = True
       #    else:
       #          print("Mensagem recebida: ", rec_data.decode())
-      #          s.sendto(rec_data, (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
+      #          s.sendto(rec_data, (ips[ (hostId+1) % playersNum   ], int(portas[ (hostId+1) % playersNum ])) )
    
    if(hostId == 0):
       print("Dealing Cards")
       deck = []
       init_deck(deck)
-      the_deal(deck, qtd, s, listen)
+      the_deal(deck, playersNum, s, listen)
    else:
-       while(len(personalDeck) < 40):
-         receive(s, listen, qtd)
+      if (hostId < 80 % playersNum):
+         valorWhile =  (80 // playersNum) + 1
+      else:
+         valorWhile =  80//playersNum
+      while(len(personalDeck) < valorWhile):
+         receive(s, listen, playersNum)
    
    print(personalDeck)
 
