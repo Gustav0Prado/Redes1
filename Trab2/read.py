@@ -121,7 +121,7 @@ def send (message, playerNum, sender, listener):
          print ("enviou carta")
          rec_data, addr = listener.recvfrom(1024)
          flip_bit(int(rec_data[-2]), hostId)
-         check = check_confirm(rec_data)
+         check = check_confirm(rec_data, playerNum)
          if not check:
             flip_bit(int(rec_data[-2]), hostId)
             print("Mensagem não recebida, mandando novamente")
@@ -142,31 +142,28 @@ def receive (sender, listener, playersNum):
    rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:-2], int(rec_data[-2]), rec_data[-1])
 
    print(str(rec_msg))
-
    if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
       # token pass
       if(rec_msg.tipo   == "tp"):
          bastao = True
       # card deal
       elif(rec_msg.tipo == "cd"):
-         if(rec_msg.jogada[0] == hostId):
+         print("entrei no CD") 
+         if(int(rec_msg.jogada[0]) == hostId):
             print(f"Received card {rec_msg.jogada[1:-1]}")
-            personalDeck.append(rec_msg.jogada[1:-1])
+            personalDeck.append(rec_msg.jogada[1:])
 
          flip_bit(rec_msg.confirmacao, hostId)
-         send(str(rec_msg).encode(), playersNum, sender, listener)
+         send(str(rec_msg), playersNum, sender, listener)
       # hand discard
       elif(rec_msg.tipo == "hd"):
+          print ("faz hd")
 
-
-         flip_bit(rec_msg.confirmacao, hostId)
-         send(str(rec_msg).encode(), playersNum, sender, listener)
       # simple pass
       elif(rec_msg.tipo == "sp"):
+          print ("faz sp")
 
 
-         flip_bit(rec_msg.confirmacao, hostId)
-         send(str(rec_msg).encode(), playersNum, sender, listener)
 
 def main():
    global hostId
@@ -226,9 +223,9 @@ def main():
       init_deck(deck)
       the_deal(deck, qtd, s, listen)
    else:
-      while(len(personalDeck) < 40):
+       while(len(personalDeck) < 40):
          receive(s, listen, qtd)
-   
+         print("tamanho deck pessoal: " + str((len(personalDeck))))
    print(len(personalDeck))
    print(personalDeck)
 
