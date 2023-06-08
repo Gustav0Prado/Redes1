@@ -111,7 +111,6 @@ def send (message, playersNum, sender, listener):
    i = 0
    # Se tiver bastao, mensagem roda o anel
 
-   print (bastao)
    if bastao:
       while(check == False and i < 100):
          sender.sendto(message.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
@@ -146,6 +145,7 @@ def receive (sender, listener, playersNum):
             personalDeck.append(int(rec_msg.jogada[1:]))
 
          flip_bit(rec_msg.confirmacao, hostId)
+         print(bin(rec_msg.confirmacao)[2:].zfill(8))
          send(str(rec_msg), playersNum, sender, listener)
       # hand discard
       elif(rec_msg.tipo == "hd"):
