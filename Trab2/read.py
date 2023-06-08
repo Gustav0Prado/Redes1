@@ -196,7 +196,7 @@ def main():
    hostId = ips.index(socket.gethostname())
    print(hostId)
 
-   nextHost = nextHost
+   nextHost = (hostId+1) % playersNum
 
    # Escuta pacotes vindos do nó anterior na porta atual
    listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
