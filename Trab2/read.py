@@ -162,9 +162,10 @@ def receive (sender, listener, playersNum):
       
       # end deal
       elif(rec_msg.tipo == "ed"):
-         send(str(rec_msg), playersNum, sender, listener)
          dealing = False
-         
+         rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+         send(str(rec_msg), playersNum, sender, listener)
+
       # hand discard
       elif(rec_msg.tipo == "hd"):
          print ("faz hd")
