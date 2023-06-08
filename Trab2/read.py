@@ -8,7 +8,7 @@ ips = []
 portas = []
 personalDeck = []
 bastao = False
-hostId = ips.index(socket.gethostname())
+hostId = 0
 
 class Mensagem:
   def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
@@ -148,6 +148,7 @@ def receive (sender, listener, playersNum):
          send(str(rec_msg).encode(), playersNum, sender, listener)
 
 def main():
+   global hostId
    # Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
    with open("conf.txt") as f:
       qtd = int(f.readline())
@@ -161,6 +162,7 @@ def main():
          portas.append(entrada[1])
 
    hostId = ips.index(socket.gethostname())
+   print(hostId)
 
    # Escuta pacotes vindos do nó anterior na porta atual
    listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -198,14 +200,17 @@ def main():
    
    
    if(hostId == 0):
+      print("Dealing Cards")
       deck = []
       init_deck(deck)
       the_deal(deck, qtd, s, listen)
    else:
       while(len(personalDeck) < 40):
          receive(s, listen, qtd)
-
+         print("Received Card")
    
    print(len(personalDeck))
    print(personalDeck)
 
+if __name__ == "__main__":
+        main()
