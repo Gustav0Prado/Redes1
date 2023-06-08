@@ -162,9 +162,9 @@ def receive (sender, listener, playersNum):
       
       # end deal
       elif(rec_msg.tipo == "ed"):
-         dealing = False
          send(str(rec_msg), playersNum, sender, listener)
-      
+         dealing = False
+         
       # hand discard
       elif(rec_msg.tipo == "hd"):
          print ("faz hd")
@@ -217,6 +217,7 @@ def main():
       while(dealing):
          receive(s, listen, playersNum)
    
+   personalDeck.sort()
    print(personalDeck)
 
 if __name__ == "__main__":
