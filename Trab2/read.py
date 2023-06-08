@@ -139,7 +139,9 @@ def receive (sender, listener, playersNum):
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
    print ("recebeu "+ rec_data)
-   rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:3], rec_data[4:-2], int(rec_data[-2]), rec_data[-1])
+   rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:-2], int(rec_data[-2]), rec_data[-1])
+
+   print(str(rec_msg))
 
    if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
       # token pass
