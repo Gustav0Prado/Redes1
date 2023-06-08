@@ -129,6 +129,7 @@ def send (message, playerNum, sender, listener):
    # sem bastao, só repassa a mensagem
    else:
       sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
+      print(f"Repassou mensagem para {(hostId+1) % playerNum}")
 
 def receive (sender, listener, playersNum):
    global bastao
@@ -223,7 +224,7 @@ def main():
    else:
       while(len(personalDeck) < 40):
          receive(s, listen, qtd)
-         print("Received Card")
+         print(f"Received Card {personalDeck[-1]}")
    
    print(len(personalDeck))
    print(personalDeck)
