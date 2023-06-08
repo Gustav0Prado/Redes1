@@ -117,6 +117,7 @@ def send (message, playerNum, sender, listener):
    if bastao:
       while(check == False and i < 100):
          sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
+         print ("enviou carta")
          rec_data, addr = listener.recvfrom(1024)
          flip_bit(int(rec_data[-2]), hostId)
          check = check_confirm(rec_data)
@@ -136,6 +137,7 @@ def receive (sender, listener, playersNum):
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
+   print ("recebeu "+ rec_data)
    rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:3], rec_data[4:-2], int(rec_data[-2]), rec_data[-1])
 
    if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
@@ -224,7 +226,6 @@ def main():
    else:
       while(len(personalDeck) < 40):
          receive(s, listen, qtd)
-         print(f"Received Card {personalDeck[-1]}")
    
    print(len(personalDeck))
    print(personalDeck)
