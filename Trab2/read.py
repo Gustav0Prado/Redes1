@@ -220,7 +220,8 @@ def main():
          valorWhile =  (80 // playersNum) + 1
       else:
          valorWhile =  80//playersNum
-      while(len(personalDeck) < valorWhile):
+      #while(len(personalDeck) < valorWhile):
+      for i in range(3):
          receive(s, listen, playersNum)
    
    print(personalDeck)
