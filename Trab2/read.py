@@ -93,7 +93,8 @@ def flip_bit(value, n):
       int: Valor com bit já flipado
    """
 
-   if (bin(value)[n+2] == '0'):
+   val_bin = bin(value)[2:].zfill(8)
+   if (val_bin[n] == '0'):
       return value | (1 << n)
    else:
       return value & ~(1 << n)
@@ -217,7 +218,6 @@ def main():
       #          print("Mensagem recebida: ", rec_data.decode())
       #          s.sendto(rec_data, (ips[ (hostId+1) % qtd   ], int(portas[ (hostId+1) % qtd ])) )
    
-   
    if(hostId == 0):
       print("Dealing Cards")
       deck = []
@@ -231,4 +231,4 @@ def main():
    print(personalDeck)
 
 if __name__ == "__main__":
-        main()
+      main()
