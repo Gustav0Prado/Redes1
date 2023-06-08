@@ -219,7 +219,7 @@ def main():
          receive(s, listen, playersNum)
    
    personalDeck.sort()
-   print(personalDeck)
+   print(f"{personalDeck} - {len(personalDeck)}")
 
 if __name__ == "__main__":
       main()
