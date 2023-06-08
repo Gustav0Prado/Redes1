@@ -48,17 +48,17 @@ def the_deal(deck, playersNum, sender, listener):
    """
    card = 0
    while (len(deck) > 0):
-       for i in range (playersNum):
-           if (len(deck) < 0):
-               return
-      
-       card = deck.pop()
+      for i in range (playersNum):
+         if (len(deck) < 0):
+            return
+   
+         card = deck.pop()
 
-       if (i == hostId):
-           personalDeck.append(card)
-       else:
-         # cd == card deal
-         send(f"({hostId}cd{i}{card}/0)", playersNum, sender, listener)
+         if (i == hostId):
+            personalDeck.append(card)
+         else:
+            # cd == card deal
+            send(f"({hostId}cd{i}{card}/0)", playersNum, sender, listener)
 
 
 def check_confirm(message, playersNum):
