@@ -58,7 +58,7 @@ def the_deal(deck, playersNum, sender, listener):
          personalDeck.append(card)
       else:
          # cd == card deal
-         send(f"({hostId}cd{i}{card}0)", playersNum, sender, listener)
+         send(f"({hostId}cd{i}{card}/0)", playersNum, sender, listener)
 
 
 def check_confirm(message, playersNum):
@@ -71,8 +71,8 @@ def check_confirm(message, playersNum):
    Returns:
       bool: True caso correto ou False caso haja erro
    """
-   
-   confirm = int(message[-2])
+   index = message.find('/')+1 
+   confirm = int(message[index:-1])
    if (bin(confirm).count("1") != playersNum):
       return False
    return True
@@ -116,15 +116,19 @@ def send (message, playersNum, sender, listener):
          rec_data, addr = listener.recvfrom(1024)
 
          rec_data = rec_data.decode()
+
          print( "rec_data é" + rec_data)
-         confirmation = int(rec_data[-2])
+         index = message.find('/')+1
+         confirmation = int(rec_data[index:-1])
+         
          print ("confirmation antes é " + bin(confirmation))
          confirmation = flip_bit(confirmation, hostId)
+         
          print ("confirmation depois é " + bin(confirmation))
-         rec_aux = rec_data[:-2] + str(confirmation) + rec_data[-1] 
+         rec_aux = rec_data[:index] + str(confirmation) + rec_data[-1] 
+
          check = check_confirm(rec_aux, playersNum)
          if not check:
-            flip_bit(int(rec_data[-2]), hostId)
             print("Mensagem não recebida, mandando novamente")
          i += 1
       # não confirmou recebimento da mensagem
@@ -138,7 +142,8 @@ def receive (sender, listener, playersNum):
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
-   rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:-2], int(rec_data[-2]), rec_data[-1])
+   index = rec_data.find('/')+1
+   rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:index], int(rec_data[index:-1]), rec_data[-1])
 
    if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
       # token pass
