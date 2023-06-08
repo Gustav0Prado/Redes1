@@ -112,6 +112,8 @@ def send (message, playerNum, sender, listener):
    check = False
    i = 0
    # Se tiver bastao, mensagem roda o anel
+
+   print (bastao)
    if bastao:
       while(check == False and i < 100):
          sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
@@ -183,6 +185,7 @@ def main():
    print("Sending to", ips[ (hostId+1) % qtd ], "on port", portas[ (hostId+1) % qtd ])
 
    # Primeira maquina do arquivo começa com o bastão
+   global bastao
    if(hostId == 0):
       bastao = True
 
