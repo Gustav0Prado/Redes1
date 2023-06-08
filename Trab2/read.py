@@ -12,38 +12,82 @@ hostId = ips.index(socket.gethostname())
 
 
 def init_deck (deck):
-    for i in range (0, 13):
-        for j in range (0, i):
-            deck.append(i)
+   """Inicia baralho
 
-    #appending jesters
-    deck.append(13)
-    deck.append(13)
-    random.shuffle(deck)
+   Args:
+      deck (list): Lista onde o baralho será iniciado
+   """
+   for i in range (0, 13):
+      for j in range (0, i):
+         deck.append(i)
+
+   #appending jesters
+   deck.append(13)
+   deck.append(13)
+   random.shuffle(deck)
+
 
 def the_deal(deck, playersNum):
-    card = 0
-    while (len(deck) > 0):
-        for i in range (playersNum):
-            if (len(deck) < 0):
-                return
-            card = deck.pop()
-            if (i == hostId):
-                personalDeck.append(card)
-            else:
-                send("()")
+   """Cartear baralho
 
-        card = deck.pop()
+   Args:
+      deck (list): Lista com cartas do baralho já embaralhadas
+      playersNum (int): Quantidade de jogadores na partida
+   """
+   card = 0
+   while (len(deck) > 0):
+      for i in range (playersNum):
+         if (len(deck) < 0):
+            return
+         
+         card = deck.pop()
+
+         if (i == hostId):
+            personalDeck.append(card)
+         else:
+            send("()")
+
 
 def check_confirm(message, playersNum):
-    confirm = message[-2]
+   """Checa se mensagem foi recebida corretamente por todos do anel
+
+   Args:
+      message (string): Mensagem recebida a ser checada
+      playersNum (int): Quantidade de jogadores na partida
+
+   Returns:
+      Bool: True caso correto ou False caso haja erro
+   """
+   
+   confirm = message[-2]
+   if (bin(confirm).count("1") != playersNum):
+      return False
+   return True
+    
+
+
+def flip_bit(value, n):
+   """Flipa o n-ésimo bit (da direita pra esquerda) de value
+
+   Args:
+      value (int): Valor inteiro
+      n (int): Posição do bit a ser flipado
+
+   Returns:
+      int: Valor com bit já flipado
+   """
+
+   if (bin(value)[n+2] == '0'):
+      return value | (1 << n)
+   else:
+      return value & ~(1 << n)
     
 
 
 def send (message):
-    s.sendto(message.encode(), (ips[ (hostId+1) % qtd  ], int(portas[ (hostId+1) % qtd ])) )
-    rec_data, addr = listen.recvfrom(1024)
-    check_confirm(rec_data)
+   s.sendto(message.encode(), (ips[ (hostId+1) % qtd  ], int(portas[ (hostId+1) % qtd ])) )
+   rec_data, addr = listen.recvfrom(1024)
+   check_confirm(rec_data)
 
 
 
