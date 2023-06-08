@@ -50,7 +50,7 @@ def the_deal(deck, playersNum, sender, listener):
    card = 0
    while (len(deck) > 0):
       for i in range (playersNum):
-         if (len(deck) < 0):
+         if (len(deck) <= 0):
             break
    
          card = deck.pop()
