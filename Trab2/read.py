@@ -8,6 +8,7 @@ ips = []
 portas = []
 personalDeck = []
 bastao = False
+dealing = True
 hostId = 0
 
 class Mensagem:
@@ -50,7 +51,7 @@ def the_deal(deck, playersNum, sender, listener):
    while (len(deck) > 0):
       for i in range (playersNum):
          if (len(deck) < 0):
-            return
+            break
    
          card = deck.pop()
 
@@ -59,6 +60,8 @@ def the_deal(deck, playersNum, sender, listener):
          else:
             # cd == card deal
             send(f"({hostId}cd{i}{card}00000000)", playersNum, sender, listener)
+   # Avisa que acabaram as cartas
+   send(f"({hostId}ed00000000)", playersNum, sender, listener)
 
 
 def check_confirm(message, playersNum):
@@ -153,7 +156,10 @@ def receive (sender, listener, playersNum):
          rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
          print(rec_msg.confirmacao)
          send(str(rec_msg), playersNum, sender, listener)
-      # hand discard
+      # end deal
+      elif(rec_msg.tipo == "ed"):
+         dealing = False
+         send(str(rec_msg), playersNum, sender, listener)
       elif(rec_msg.tipo == "hd"):
          print ("faz hd")
 
@@ -222,12 +228,7 @@ def main():
       init_deck(deck)
       the_deal(deck, playersNum, s, listen)
    else:
-      if (hostId < 80 % playersNum):
-         valorWhile =  (80 // playersNum) + 1
-      else:
-         valorWhile =  80//playersNum
-      #while(len(personalDeck) < valorWhile):
-      for i in range(60):
+      while(dealing):
          receive(s, listen, playersNum)
    
    print(personalDeck)
