@@ -118,7 +118,11 @@ def send (message, playerNum, sender, listener):
       while(check == False and i < 100):
          sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
          rec_data, addr = listener.recvfrom(1024)
+         flip_bit(int(rec_data[-2]), hostId)
          check = check_confirm(rec_data)
+         if not check:
+            flip_bit(int(rec_data[-2]), hostId)
+            print("Mensagem não recebida, mandando novamente")
          i += 1
       # não confirmou recebimento da mensagem
       assert i < 100
