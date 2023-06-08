@@ -111,13 +111,18 @@ def send (message, playerNum, sender, listener):
    """
    check = False
    i = 0
-   while(check == False and i < 100):
+   # Se tiver bastao, mensagem roda o anel
+   if bastao:
+      while(check == False and i < 100):
+         sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
+         rec_data, addr = listener.recvfrom(1024)
+         check = check_confirm(rec_data)
+         i += 1
+      # não confirmou recebimento da mensagem
+      assert i < 100
+   # sem bastao, só repassa a mensagem
+   else:
       sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
-      rec_data, addr = listener.recvfrom(1024)
-      check = check_confirm(rec_data)
-      i += 1
-   # não confirmou recebimento da mensagem
-   assert i < 100
 
 def receive (sender, listener, playersNum):
    global bastao
