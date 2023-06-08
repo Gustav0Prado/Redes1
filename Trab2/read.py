@@ -53,15 +53,12 @@ def the_deal(deck, playersNum, sender, listener):
             return
          
          card = deck.pop()
-         print(f"Card = {card}")
 
          if (i == hostId):
-            print(f"Appended card {card}")
             personalDeck.append(card)
          else:
             # cd == card deal
             send(f"({hostId}cd{i}{card}0)", playersNum, sender, listener)
-            print(f"Sent card to {i}")
 
 
 def check_confirm(message, playersNum):
@@ -118,8 +115,8 @@ def send (message, playerNum, sender, listener):
    if bastao:
       while(check == False and i < 100):
          sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
-         print ("enviou carta")
          rec_data, addr = listener.recvfrom(1024)
+
          flip_bit(int(rec_data[-2]), hostId)
          check = check_confirm(rec_data, playerNum)
          if not check:
@@ -131,37 +128,32 @@ def send (message, playerNum, sender, listener):
    # sem bastao, só repassa a mensagem
    else:
       sender.sendto(message.encode(), (ips[ (hostId+1) % playerNum  ], int(portas[ (hostId+1) % playerNum ])) )
-      print(f"Repassou mensagem para {(hostId+1) % playerNum}")
 
 def receive (sender, listener, playersNum):
    global bastao
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
-   print ("recebeu "+ rec_data)
    rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:-2], int(rec_data[-2]), rec_data[-1])
 
-   print(str(rec_msg))
    if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
       # token pass
       if(rec_msg.tipo   == "tp"):
          bastao = True
       # card deal
       elif(rec_msg.tipo == "cd"):
-         print("entrei no CD") 
          if(int(rec_msg.jogada[0]) == hostId):
-            print(f"Received card {rec_msg.jogada[1:-1]}")
-            personalDeck.append(rec_msg.jogada[1:])
+            personalDeck.append(int(rec_msg.jogada[1:]))
 
          flip_bit(rec_msg.confirmacao, hostId)
          send(str(rec_msg), playersNum, sender, listener)
       # hand discard
       elif(rec_msg.tipo == "hd"):
-          print ("faz hd")
+         print ("faz hd")
 
       # simple pass
       elif(rec_msg.tipo == "sp"):
-          print ("faz sp")
+         print ("faz sp")
 
 
 
@@ -225,8 +217,7 @@ def main():
    else:
        while(len(personalDeck) < 40):
          receive(s, listen, qtd)
-         print("tamanho deck pessoal: " + str((len(personalDeck))))
-   print(len(personalDeck))
+   
    print(personalDeck)
 
 if __name__ == "__main__":
