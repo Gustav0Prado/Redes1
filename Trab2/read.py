@@ -1,16 +1,17 @@
 #!/usr/bin/python3
 
-import socket
-import random
+import socket, random, os
 
 ips = []
 portas = []
 personalDeck = []
+passControler = []
 bastao = False
 dealing = True
 hostId = 0
 nextHost = 0
-passControler = []
+playersFinished = 0
+iFinished = False
 
 class Mensagem:
   def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
@@ -27,7 +28,7 @@ class Mensagem:
 def ver_comandos():
    print("As possíveis jogadas são: ")
    print("passo : você passa o seu turno para o próximo jogador sem descartar")
-   print("descartar: você descarta as cartas que deseja na sua rodada")
+   print("descartar x y: você descarta as cartas que deseja na sua rodada (x cartas y)")
    print("ver_deck: você imprime o deck que está na sua mão")
 
 
@@ -38,9 +39,9 @@ def print_personalDeck(deck):
     print("seu deck é composto por:")
     for i in range(1, 14):
       if(i <= 9 ):
-         print(str(i) + "  :" + str(deck.count(i)))
+         print(str(i) + "  : " + str(deck.count(i)))
       else:
-         print(str(i) + " :" + str(deck.count(i)))
+         print(str(i) + " : "  + str(deck.count(i)))
    
 def init_deck (deck):
    """Inicia baralho
@@ -74,6 +75,36 @@ def pass_turn(playersNum, sender, listener):
    bastao = False
    send(f"({hostId}tpp00000000)", playersNum, sender, listener)
 
+
+def discard(play_qtd, play_card, sender, listener, playersNum):
+   global iFinished
+   global playersFinished
+   global bastao
+
+   # Caso haja cartas suficientes, remove play_card por play_qtd vezes
+   if(personalDeck.count(play_card) >= play_qtd):
+      for i in range(play_qtd):
+         for elem in personalDeck:
+            if(elem == play_card):
+               del(personalDeck[personalDeck.index(elem)])
+               break
+   
+      print ("Mão atual: ", personalDeck)
+
+      if(len(personalDeck) > 0):
+         send(f"({hostId}hd{play_qtd:02d}{play_card:02d}000000000)", playersNum, sender, listener)
+      else:
+         send(f"({hostId}hd{play_qtd:02d}{play_card:02d}100000000)", playersNum, sender, listener)
+         iFinished = True
+         playersFinished += 1
+
+         os.system("clear")
+         print(f"Terminou o jogo! {playersFinished}° lugar")
+      
+      send(f"({hostId}tp00000000)", playersNum, sender, listener)
+      bastao = False
+   else:
+      print ("Jogada Inválida!")
 
    
 
@@ -148,24 +179,28 @@ def send (message, playersNum, sender, listener):
    """
    check = False
    i = 0
-   # Se tiver bastao, mensagem roda o anel
-
+   
+   # Se tiver bastao, mensagem roda o anel.
+   # Se for token pass, só passa pra frente sem esperar voltar
    if bastao:
-      while(check == False and i < 100):
+      if(message[2:4] == "tp"):
          sender.sendto(message.encode(), (ips[nextHost], int(portas[nextHost])) )
-         rec_data, addr = listener.recvfrom(1024)
-         rec_data = rec_data.decode()
+      else:
+         while(check == False and i < 100):
+            sender.sendto(message.encode(), (ips[nextHost], int(portas[nextHost])) )
+            rec_data, addr = listener.recvfrom(1024)
+            rec_data = rec_data.decode()
 
-         # flipa 'bit' de confirmacao e cria mensagem auxiliar
-         confirmation = flip_bit(rec_data[-9:-1], hostId)
-         rec_aux = rec_data[:-9] + confirmation + rec_data[-1] 
+            # flipa 'bit' de confirmacao e cria mensagem auxiliar
+            confirmation = flip_bit(rec_data[-9:-1], hostId)
+            rec_aux = rec_data[:-9] + confirmation + rec_data[-1] 
 
-         check = check_confirm(rec_aux, playersNum)
-         if not check:
-            print("Mensagem não recebida, mandando novamente")
-         i += 1
-      # não confirmou recebimento da mensagem
-      assert i < 100
+            check = check_confirm(rec_aux, playersNum)
+            if not check:
+               print("Mensagem não recebida, mandando novamente")
+            i += 1
+         # não confirmou recebimento da mensagem
+         assert i < 100
    # sem bastao, só repassa a mensagem
    else:
       sender.sendto(message.encode(), (ips[nextHost], int(portas[nextHost])) )
@@ -180,53 +215,79 @@ def receive (sender, listener, playersNum):
    """
    global bastao
    global dealing
+   global playersFinished
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
+
    #rec_data - [0]inicio; [1]origem; [2:4]tipo; [4:-9]jogada; [-9:-1]confirmação; [1]fim; 
    rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:-9], rec_data[-9:-1], rec_data[-1])
 
-   if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
-      # token pass
-      if(rec_msg.tipo   == "tp"):
-         bastao = True
-      
-      # card deal
-      elif(rec_msg.tipo == "cd"):
-         if(int(rec_msg.jogada[0]) == hostId):
-            personalDeck.append(int(rec_msg.jogada[1:]))
+   # Caso ja tenha terminado, apenas repassa mensagens
+   if iFinished:
+      if(rec_msg.tipo == "hd" and rec_msg.jogada[-1] == "1"):
+         playersFinished += 1
 
-         # Confirma recebimento e passa pra frente
-         rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
-         send(str(rec_msg), playersNum, sender, listener)
-      
-      # end deal
-      elif(rec_msg.tipo == "ed"):
-         dealing = False
-         rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
-         send(str(rec_msg), playersNum, sender, listener)
+      rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+      sender.sendto(str(rec_msg).encode(), (ips[nextHost], int(portas[nextHost])) )
 
-      # hand discard
-      elif(rec_msg.tipo == "hd"):
-         print ("faz hd")
+   else:
+      if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
+         # token pass
+         if(rec_msg.tipo   == "tp"):
+            bastao = True
+         
+         # card deal
+         elif(rec_msg.tipo == "cd"):
+            if(int(rec_msg.jogada[0]) == hostId):
+               personalDeck.append(int(rec_msg.jogada[1:]))
 
-      # simple pass
-      elif(rec_msg.tipo == "sp"):
-         print(f"Jogador {rec_msg.origem} passou o turno!")
-         passControler[int(rec_msg.origem)] = 1
-        
-        
-         # Confirma recebimento e passa pra frente
-         rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
-         send(str(rec_msg), playersNum, sender, listener)         
+            # Confirma recebimento e passa pra frente
+            rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+            send(str(rec_msg), playersNum, sender, listener)
+         
+         # end deal
+         elif(rec_msg.tipo == "ed"):
+            dealing = False
+            rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+            send(str(rec_msg), playersNum, sender, listener)
 
+         # hand discard
+         elif(rec_msg.tipo == "hd"):
+            for i in range(int(rec_msg.origem)):
+               print("\t", end="")
+            print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])}")
 
+            if(rec_msg.jogada[4] == "1"):
+               for i in range(int(rec_msg.origem)):
+                  print("\t", end="")
+               print (f"Jogador {rec_msg.origem} terminou!")
+               playersFinished += 1
+
+            rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+            send(str(rec_msg), playersNum, sender, listener)
+
+         # simple pass
+         elif(rec_msg.tipo == "sp"):
+            #Print com tabs :)
+            for i in range(int(rec_msg.origem)):
+               print("\t", end="")
+            print(f"Jogador {rec_msg.origem} passou o turno!")
+            passControler[int(rec_msg.origem)] = 1
+         
+         
+            # Confirma recebimento e passa pra frente
+            rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+            send(str(rec_msg), playersNum, sender, listener)
 
 
 def main():
    global hostId
    global nextHost
    global bastao
+   global personalDeck
+   global playersFinished
+   global iFinished
    global passControler
 
    # Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
@@ -242,7 +303,7 @@ def main():
          portas.append(entrada[1])
 
    hostId = ips.index(socket.gethostname())
-   print(hostId)
+   #print(hostId)
 
    nextHost = (hostId+1) % playersNum
    
@@ -254,11 +315,11 @@ def main():
    # Escuta pacotes vindos do nó anterior na porta atual
    listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
    listen.bind( (socket.gethostbyname(ips[hostId]), int(portas[hostId])) )
-   print("Listening on ", portas[hostId])
+   #print("Listening on ", portas[hostId])
 
    # Envia pacotes para o próximo nó
    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-   print("Sending to", ips[nextHost], "on port", portas[nextHost])
+   #print("Sending to", ips[nextHost], "on port", portas[nextHost])
 
    # Primeira maquina do arquivo começa com o bastão e dá as cartas
    if(hostId == 0):
@@ -274,20 +335,31 @@ def main():
    personalDeck.sort()
    print(f"{personalDeck} - {len(personalDeck)}")
    partida = True
-   while(partida):#partida acaba quando todos os jogadores tiverem mãos vazias
-      if (bastao):
-         print("_____________________________________________")
+
+   #partida acaba quando todos os jogadores tiverem mãos vazias
+   while(partida):
+      # Caso já tenha terminado ou não tenha o bastão, apenas repassa mensagens
+      if iFinished or (not bastao):
+         receive(s, listen, playersNum)
+
+      elif (bastao):
+         print("_________________________________________________")
          print(f"Jogador {hostId}, é sua vez! qual sua ação? Digite ver_comandos")
+         print (">>>", end="")
          jogada = input()
-         if  (jogada == "ver_comandos"):
+         jogada = jogada.split()
+         if  (jogada[0] == "ver_comandos"):
             ver_comandos()
-         elif(jogada == "passo"):
+         elif(jogada[0] == "passo"):
             pass_turn(playersNum, s, listen)
-         elif(jogada == "ver_deck"):
-            print_personalDeck()
-         elif(jogada == "descartar"):
-            print("Em construção")
+         elif(jogada[0] == "ver_deck"):
+            print_personalDeck(personalDeck)
+         elif(jogada[0] == "descartar"):
+            discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
       else:
          receive(s,listen, playersNum)
+
+      if playersFinished == playersNum:
+         partida = False
 if __name__ == "__main__":
       main()
