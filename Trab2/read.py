@@ -8,10 +8,11 @@ personalDeck = []
 passControler = []
 bastao = False
 dealing = True
+iFinished = False
 hostId = 0
 nextHost = 0
 playersFinished = 0
-iFinished = False
+last_player_card = 0
 
 class Mensagem:
   def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
@@ -80,9 +81,10 @@ def discard(play_qtd, play_card, sender, listener, playersNum):
    global iFinished
    global playersFinished
    global bastao
+   global last_player_card
 
    # Caso haja cartas suficientes, remove play_card por play_qtd vezes
-   if(personalDeck.count(play_card) >= play_qtd):
+   if(personalDeck.count(play_card) >= play_qtd and play_card > last_player_card):
       for i in range(play_qtd):
          for elem in personalDeck:
             if(elem == play_card):
@@ -216,6 +218,7 @@ def receive (sender, listener, playersNum):
    global bastao
    global dealing
    global playersFinished
+   global last_player_card
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
@@ -257,6 +260,7 @@ def receive (sender, listener, playersNum):
             for i in range(int(rec_msg.origem)):
                print("\t", end="")
             print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])}")
+            last_player_card = int(rec_msg.jogada[2:4])
 
             if(rec_msg.jogada[4] == "1"):
                for i in range(int(rec_msg.origem)):
