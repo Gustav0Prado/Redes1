@@ -213,7 +213,7 @@ def receive (sender, listener, playersNum):
       # simple pass
       elif(rec_msg.tipo == "sp"):
          print(f"Jogador {rec_msg.origem} passou o turno!")
-         passControler[rec_msg.origem] = 1
+         passControler[int(rec_msg.origem)] = 1
         
         
          # Confirma recebimento e passa pra frente
