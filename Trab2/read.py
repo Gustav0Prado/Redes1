@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 
 import socket
-import sys, termios
 import random
 
 ips = []
 portas = []
 personalDeck = []
 bastao = False
+dealing = True
 hostId = 0
+nextHost = 0
 
 class Mensagem:
   def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
@@ -49,8 +50,8 @@ def the_deal(deck, playersNum, sender, listener):
    card = 0
    while (len(deck) > 0):
       for i in range (playersNum):
-         if (len(deck) < 0):
-            return
+         if (len(deck) <= 0):
+            break
    
          card = deck.pop()
 
@@ -58,7 +59,9 @@ def the_deal(deck, playersNum, sender, listener):
             personalDeck.append(card)
          else:
             # cd == card deal
-            send(f"({hostId}cd{i}{card}/0)", playersNum, sender, listener)
+            send(f"({hostId}cd{i}{card}00000000)", playersNum, sender, listener)
+   # Avisa que acabaram as cartas
+   send(f"({hostId}ed00000000)", playersNum, sender, listener)
 
 
 def check_confirm(message, playersNum):
@@ -71,9 +74,8 @@ def check_confirm(message, playersNum):
    Returns:
       bool: True caso correto ou False caso haja erro
    """
-   index = message.find('/')+1 
-   confirm = int(message[index:-1])
-   if (bin(confirm).count("1") != playersNum):
+   confirm = message[-9:-1]
+   if (confirm.count("1") != playersNum):
       return False
    return True
     
@@ -83,17 +85,16 @@ def flip_bit(value, n):
    """Flipa o n-ésimo bit (da direita pra esquerda) de value
 
    Args:
-      value (int): Valor inteiro
+      value (string): Valor em bits
       n (int): Posição do bit a ser flipado
 
    Returns:
       int: Valor com bit já flipado
    """
-   val_bin = bin(value)[2:].zfill(8)
-   if (val_bin[n] == '0'):
-      return value | (1 << n)
+   if (value[n] == '0'):
+      return value[:n] + '1' + value[n+1:]
    else:
-      return value & ~(1 << n)
+      return value[:n] + '0' + value[n+1:]
     
 
 
@@ -112,20 +113,13 @@ def send (message, playersNum, sender, listener):
 
    if bastao:
       while(check == False and i < 100):
-         sender.sendto(message.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
+         sender.sendto(message.encode(), (ips[nextHost], int(portas[nextHost])) )
          rec_data, addr = listener.recvfrom(1024)
-
          rec_data = rec_data.decode()
 
-         print( "rec_data é" + rec_data)
-         index = message.find('/')+1
-         confirmation = int(rec_data[index:-1])
-         
-         print ("confirmation antes é " + bin(confirmation))
-         confirmation = flip_bit(confirmation, hostId)
-         
-         print ("confirmation depois é " + bin(confirmation))
-         rec_aux = rec_data[:index] + str(confirmation) + rec_data[-1] 
+         # flipa 'bit' de confirmacao e cria mensagem auxiliar
+         confirmation = flip_bit(rec_data[-9:-1], hostId)
+         rec_aux = rec_data[:-9] + confirmation + rec_data[-1] 
 
          check = check_confirm(rec_aux, playersNum)
          if not check:
@@ -135,28 +129,43 @@ def send (message, playersNum, sender, listener):
       assert i < 100
    # sem bastao, só repassa a mensagem
    else:
-      sender.sendto(message.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
+      sender.sendto(message.encode(), (ips[nextHost], int(portas[nextHost])) )
 
 def receive (sender, listener, playersNum):
+   """Aguarda ate receber uma mensagem e a processa
+
+   Args:
+       sender (socket): socket para enviar
+       listener (socket): socket para ouvir
+       playersNum (int): Quantidade de jogadores
+   """
    global bastao
+   global dealing
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
-   index = rec_data.find('/')+1
-   rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:index], int(rec_data[index:-1]), rec_data[-1])
+   rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:-9], rec_data[-9:-1], rec_data[-1])
 
    if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
       # token pass
       if(rec_msg.tipo   == "tp"):
          bastao = True
+      
       # card deal
       elif(rec_msg.tipo == "cd"):
          if(int(rec_msg.jogada[0]) == hostId):
-            personalDeck.append(int(rec_msg.jogada[1:-1]))
+            personalDeck.append(int(rec_msg.jogada[1:]))
 
+         # Confirma recebimento e passa pra frente
          rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
-         print(bin(rec_msg.confirmacao)[2:].zfill(8))
          send(str(rec_msg), playersNum, sender, listener)
+      
+      # end deal
+      elif(rec_msg.tipo == "ed"):
+         dealing = False
+         rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+         send(str(rec_msg), playersNum, sender, listener)
+
       # hand discard
       elif(rec_msg.tipo == "hd"):
          print ("faz hd")
@@ -169,6 +178,8 @@ def receive (sender, listener, playersNum):
 
 def main():
    global hostId
+   global nextHost
+   global bastao
 
    # Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
    with open("conf.txt") as f:
@@ -185,6 +196,8 @@ def main():
    hostId = ips.index(socket.gethostname())
    print(hostId)
 
+   nextHost = (hostId+1) % playersNum
+
    # Escuta pacotes vindos do nó anterior na porta atual
    listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
    listen.bind( (socket.gethostbyname(ips[hostId]), int(portas[hostId])) )
@@ -192,48 +205,21 @@ def main():
 
    # Envia pacotes para o próximo nó
    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-   print("Sending to", ips[ (hostId+1) % playersNum ], "on port", portas[ (hostId+1) % playersNum ])
+   print("Sending to", ips[nextHost], "on port", portas[nextHost])
 
-   # Primeira maquina do arquivo começa com o bastão
-   global bastao
+   # Primeira maquina do arquivo começa com o bastão e dá as cartas
    if(hostId == 0):
       bastao = True
-
-   #while(True):
-      # # Se tiver o bastão, envia mensagem, espera receber de volta e passa o bastão pra frente
-      # if(bastao):
-      #    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
-      #    send_data = input("\t>>> Você possui o bastao, envie uma mensagem: ")
-      #    s.sendto(send_data.encode(), (ips[ (hostId+1) % playersNum  ], int(portas[ (hostId+1) % playersNum ])) )
-
-      #    rec_data, addr = listen.recvfrom(1024)
-
-      #    s.sendto(b'b', (ips[ (hostId+1) % playersNum   ], int(portas[ (hostId+1) % playersNum ])) )
-      #    bastao = False
-      # # Se nao tiver o bastao espera uma mensagem
-      # else:
-      #    print("\tVocê nao possui o bastao, aguarde uma mensagem")
-      #    rec_data, addr = listen.recvfrom(1024)
-      #    if(rec_data.decode() == 'b'):
-      #       bastao = True
-      #    else:
-      #          print("Mensagem recebida: ", rec_data.decode())
-      #          s.sendto(rec_data, (ips[ (hostId+1) % playersNum   ], int(portas[ (hostId+1) % playersNum ])) )
-   
-   if(hostId == 0):
       print("Dealing Cards")
       deck = []
       init_deck(deck)
       the_deal(deck, playersNum, s, listen)
    else:
-      if (hostId < 80 % playersNum):
-         valorWhile =  (80 // playersNum) + 1
-      else:
-         valorWhile =  80//playersNum
-      while(len(personalDeck) < valorWhile):
+      while(dealing):
          receive(s, listen, playersNum)
    
-   print(personalDeck)
+   personalDeck.sort()
+   print(f"{personalDeck} - {len(personalDeck)}")
 
 if __name__ == "__main__":
       main()
