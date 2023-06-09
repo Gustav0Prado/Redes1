@@ -355,7 +355,15 @@ def main():
          elif(jogada[0] == "ver_deck"):
             print_personalDeck(personalDeck)
          elif(jogada[0] == "descartar"):
-            discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
+            if(len(jogada) == 1):
+               print("Descartar _ _: ", end="")
+               disc = input()
+               disc = disc.split()
+               discard(int(disc[0]),   int(disc[1]), s, listen, playersNum)
+            elif(len(jogada) == 3):
+               discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
+            else:
+               print("Erro na jogada!")
       else:
          receive(s,listen, playersNum)
 
