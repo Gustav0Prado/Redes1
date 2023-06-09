@@ -10,6 +10,7 @@ bastao = False
 dealing = True
 hostId = 0
 nextHost = 0
+passControler = []
 
 class Mensagem:
   def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
@@ -23,7 +24,24 @@ class Mensagem:
   def __str__(self):
      return self.inicio + str(self.origem) + self.tipo + str(self.jogada) + str(self.confirmacao) + self.fim
 
+def ver_comandos():
+   print("As possíveis jogadas são: ")
+   print("passo : você passa o seu turno para o próximo jogador sem descartar")
+   print("descartar: você descarta as cartas que deseja na sua rodada")
+   print("ver_deck: você imprime o deck que está na sua mão")
 
+
+
+
+def print_personalDeck(deck):
+    print(f"você possui {len(deck)} cartas" )
+    print("seu deck é composto por:")
+    for i in range(1, 14):
+      if(i <= 9 ):
+         print(str(i) + "  :" + str(deck.count(i)))
+      else:
+         print(str(i) + " :" + str(deck.count(i)))
+   
 def init_deck (deck):
    """Inicia baralho
 
@@ -39,6 +57,25 @@ def init_deck (deck):
    deck.append(13)
    random.shuffle(deck)
 
+def pass_turn(playersNum, sender, listener):
+   """Manda uma mensagem para os outros jogadores que o turno foi passado
+   
+   Args:
+
+      playersNum (int): Quantidade de jogadores na partida
+      sender: 
+      listener:
+   """
+   global bastao
+   #turn pass
+   send(f"({hostId}spp00000000)", playersNum, sender, listener)
+
+   #token pass
+   bastao = False
+   send(f"({hostId}tpp00000000)", playersNum, sender, listener)
+
+
+   
 
 def the_deal(deck, playersNum, sender, listener):
    """Cartear baralho
@@ -46,6 +83,8 @@ def the_deal(deck, playersNum, sender, listener):
    Args:
       deck (list): Lista com cartas do baralho já embaralhadas
       playersNum (int): Quantidade de jogadores na partida
+      sender:
+      listener
    """
    card = 0
    while (len(deck) > 0):
@@ -144,6 +183,7 @@ def receive (sender, listener, playersNum):
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
+   #rec_data - [0]inicio; [1]origem; [2:4]tipo; [4:-9]jogada; [-9:-1]confirmação; [1]fim; 
    rec_msg = Mensagem(rec_data[0], rec_data[1], rec_data[2:4], rec_data[4:-9], rec_data[-9:-1], rec_data[-1])
 
    if(rec_msg.inicio == '('  and  rec_msg.fim == ')'):
@@ -172,7 +212,14 @@ def receive (sender, listener, playersNum):
 
       # simple pass
       elif(rec_msg.tipo == "sp"):
-         print ("faz sp")
+         print(f"Jogador {rec_msg.origem} passou o turno!")
+         passControler[rec_msg.origem] = 1
+        
+        
+         # Confirma recebimento e passa pra frente
+         rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+         send(str(rec_msg), playersNum, sender, listener)         
+
 
 
 
@@ -180,6 +227,7 @@ def main():
    global hostId
    global nextHost
    global bastao
+   global passControler
 
    # Le arquivo de configuracao e coloca nomes das maquinas e portas em listas
    with open("conf.txt") as f:
@@ -197,6 +245,11 @@ def main():
    print(hostId)
 
    nextHost = (hostId+1) % playersNum
+   
+   #inicia controladores do jogo
+   for i in range (playersNum):
+      passControler.append(0) #controlador de quem passou o turno 
+   
 
    # Escuta pacotes vindos do nó anterior na porta atual
    listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -220,6 +273,21 @@ def main():
    
    personalDeck.sort()
    print(f"{personalDeck} - {len(personalDeck)}")
-
+   partida = True
+   while(partida):#partida acaba quando todos os jogadores tiverem mãos vazias
+      if (bastao):
+         print("_____________________________________________")
+         print(f"Jogador {hostId}, é sua vez! qual sua ação? Digite ver_comandos")
+         jogada = input()
+         if  (jogada == "ver_comandos"):
+            ver_comandos()
+         elif(jogada == "passo"):
+            pass_turn(playersNum, s, listen)
+         elif(jogada == "ver_deck"):
+            print_personalDeck()
+         elif(jogada == "descartar"):
+            print("Em construção")
+      else:
+         receive(s,listen, playersNum)
 if __name__ == "__main__":
       main()
