@@ -12,7 +12,8 @@ iFinished = False
 hostId = 0
 nextHost = 0
 playersFinished = 0
-last_player_card = 0
+last_played_card = 1000
+last_player = -1
 
 class Mensagem:
   def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
@@ -78,13 +79,23 @@ def pass_turn(playersNum, sender, listener):
 
 
 def discard(play_qtd, play_card, sender, listener, playersNum):
+   """Descarta play_qtd cartas do tipo play_card da sua mão
+
+   Args:
+       play_qtd (int): Quantidade descartada
+       play_card (int): Carta descartada
+       sender (socket): Socket para enviar
+       listener (socket): Socket para ouvir
+       playersNum (int): Quantidade de jogadores
+   """
    global iFinished
    global playersFinished
    global bastao
-   global last_player_card
+   global last_played_card
+   global last_player
 
    # Caso haja cartas suficientes, remove play_card por play_qtd vezes
-   if(personalDeck.count(play_card) >= play_qtd and play_card > last_player_card):
+   if(personalDeck.count(play_card) >= play_qtd and play_card < last_played_card):
       for i in range(play_qtd):
          for elem in personalDeck:
             if(elem == play_card):
@@ -105,10 +116,23 @@ def discard(play_qtd, play_card, sender, listener, playersNum):
       
       send(f"({hostId}tp00000000)", playersNum, sender, listener)
       bastao = False
+      last_player = hostId
    else:
       print ("Jogada Inválida!")
 
    
+def nextRound(playersNum, sender, listener):
+   """Passa mensagem para limpar telas
+   """
+   global last_played_card
+
+   os.system("clear")
+   print ("Rodada terminou, reseta nível de descarte")
+   print(personalDeck)
+   last_played_card = 1000
+
+   send(f"({hostId}nr00000000)", playersNum, sender, listener)
+
 
 def the_deal(deck, playersNum, sender, listener):
    """Cartear baralho
@@ -218,7 +242,8 @@ def receive (sender, listener, playersNum):
    global bastao
    global dealing
    global playersFinished
-   global last_player_card
+   global last_played_card
+   global last_player
 
    rec_data, addr = listener.recvfrom(1024)
    rec_data = rec_data.decode()
@@ -257,10 +282,14 @@ def receive (sender, listener, playersNum):
 
          # hand discard
          elif(rec_msg.tipo == "hd"):
+            # Printa com tabs :)
             for i in range(int(rec_msg.origem)):
                print("\t", end="")
             print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])}")
-            last_player_card = int(rec_msg.jogada[2:4])
+
+            #Atualiza utlima carta e ultimo jogador
+            last_played_card = int(rec_msg.jogada[2:4])
+            last_player = int(rec_msg.origem)
 
             if(rec_msg.jogada[4] == "1"):
                for i in range(int(rec_msg.origem)):
@@ -279,6 +308,16 @@ def receive (sender, listener, playersNum):
             print(f"Jogador {rec_msg.origem} passou o turno!")
             passControler[int(rec_msg.origem)] = 1
          
+         
+            # Confirma recebimento e passa pra frente
+            rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
+            send(str(rec_msg), playersNum, sender, listener)
+
+         # next round
+         elif(rec_msg.tipo == "nr"):
+            os.system("clear")
+            print ("Rodada terminou, reseta nível de descarte")
+            print(personalDeck)
          
             # Confirma recebimento e passa pra frente
             rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
@@ -347,6 +386,9 @@ def main():
          receive(s, listen, playersNum)
 
       elif (bastao):
+         if (last_player == hostId):
+            nextRound(playersNum, s, listen)
+
          print("_________________________________________________")
          print(f"Jogador {hostId}, é sua vez! qual sua ação? Digite ver_comandos")
          print (">>>", end="")
