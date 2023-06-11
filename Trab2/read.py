@@ -98,6 +98,8 @@ def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
    global last_player
 
    # Caso haja cartas suficientes, remove play_card por play_qtd vezes
+   print("play_card:" + str(play_card) + "play_qtd:" + str(play_qtd) + "jester_qtd:" + str(jester_qtd))
+   print("no deck " + str(personalDeck.count(play_card)) + "cartas" + str(play_card) + " e " + str(personalDeck.count(jester)) + " jester")
    if((personalDeck.count(play_card) >= play_qtd    #caso haja cartas suficientes
       and play_card < last_played_card              #caso as cartas sejam de maior prioridade  >>>> falta numero de cartas
       and personalDeck.count(jester) >= jester_qtd)):
@@ -420,13 +422,13 @@ def main():
          print (">>>", end="")
          jogada = input()
          jogada = jogada.split()
-         if  (jogada[0] == "ver_comandos"):
+         if  ((jogada[0] == "ver_comandos") or (jogada[0] == "vc")):
             ver_comandos()
-         elif(jogada[0] == "passo"):
+         elif((jogada[0] == "passo") or (jogada[0] == "p")):
             pass_turn(playersNum, s, listen)
-         elif(jogada[0] == "ver_deck"):
+         elif((jogada[0] == "ver_deck") or (jogada [0] == "vd")):
             print_personalDeck(personalDeck)
-         elif(jogada[0] == "descartar"):
+         elif((jogada[0] == "descartar") or (jogada[0] == "d")):
             if(len(jogada) == 1):
                #caso não tenha digitado a carta e a quantidade a descartar, solicita
                print("Descartar _ _: ", end="")
@@ -435,12 +437,12 @@ def main():
                if(len(disc) == 2):
                   discard(int(disc[0]), int(disc[1]), s, listen, playersNum)
                if(len(disc) == 5):
-                  discard(int(disc[0]), int(disc[1]), s, listen, playersNum, disc[3])
+                  discard(int(disc[0]), int(disc[1]), s, listen, playersNum, int(disc[3]))
 
             elif(len(jogada) == 3):
                discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
             elif(len(jogada) == 6):
-               discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum, disc[4])
+               discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum, int(jogada[4]))
             else:
                print("Erro na jogada!")
       else:
