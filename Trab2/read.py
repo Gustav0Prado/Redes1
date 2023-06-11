@@ -14,6 +14,7 @@ nextHost = 0
 playersFinished = 0
 last_played_card = 1000
 last_player = -1
+jester = 13
 
 class Mensagem:
   def __init__(self, inicio, origem, tipo, jogada, confirmacao, fim):
@@ -31,6 +32,7 @@ def ver_comandos():
    print("As possíveis jogadas são: ")
    print("passo : você passa o seu turno para o próximo jogador sem descartar")
    print("descartar x y: você descarta as cartas que deseja na sua rodada (x cartas y)")
+   print("descartar x y + z 13: você pode descartar as cartas que deseja + um número de coringas")
    print("ver_deck: você imprime o deck que está na sua mão")
 
 
@@ -40,10 +42,11 @@ def print_personalDeck(deck):
     print(f"você possui {len(deck)} cartas" )
     print("seu deck é composto por:")
     for i in range(1, 14):
-      if(i <= 9 ):
-         print(str(i) + "  : " + str(deck.count(i)))
-      else:
-         print(str(i) + " : "  + str(deck.count(i)))
+      if(deck.count(i) > 0):
+         if(i <= 9 ):
+               print(str(i) + "  : " + str(deck.count(i)))
+         else:
+               print(str(i) + " : "  + str(deck.count(i)))
    
 def init_deck (deck):
    """Inicia baralho
@@ -78,7 +81,7 @@ def pass_turn(playersNum, sender, listener):
    send(f"({hostId}tpp00000000)", playersNum, sender, listener)
 
 
-def discard(play_qtd, play_card, sender, listener, playersNum):
+def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
    """Descarta play_qtd cartas do tipo play_card da sua mão
 
    Args:
@@ -95,30 +98,46 @@ def discard(play_qtd, play_card, sender, listener, playersNum):
    global last_player
 
    # Caso haja cartas suficientes, remove play_card por play_qtd vezes
-   if(personalDeck.count(play_card) >= play_qtd and play_card < last_played_card):
+   if((personalDeck.count(play_card) >= play_qtd    #caso haja cartas suficientes
+      and play_card < last_played_card              #caso as cartas sejam de maior prioridade  >>>> falta numero de cartas
+      and personalDeck.count(jester) >= jester_qtd)):
+      #remove as cartas play_card por play_qtd vezes
       for i in range(play_qtd):
          for elem in personalDeck:
             if(elem == play_card):
                del(personalDeck[personalDeck.index(elem)])
                break
-   
+      #se remover coringa, remove coringa por jester_qtd vezes
+      if(jester_qtd > 0):
+         for i in range(jester_qtd):
+            for elem in personalDeck:
+               if(elem == jester):
+                  del(personalDeck[personalDeck.index(elem)])
+                  break         
+            
       print ("Mão atual: ", personalDeck)
 
+      #se ainda houver cartas
       if(len(personalDeck) > 0):
-         send(f"({hostId}hd{play_qtd:02d}{play_card:02d}000000000)", playersNum, sender, listener)
+         send(f"({hostId}hd{play_qtd:02d}{play_card:02d}{jester_qtd}000000000)", playersNum, sender, listener)
+      #caso acabou o deck -> este jogador terminou
       else:
-         send(f"({hostId}hd{play_qtd:02d}{play_card:02d}100000000)", playersNum, sender, listener)
+         send(f"({hostId}hd{play_qtd:02d}{play_card:02d}{jester_qtd}100000000)", playersNum, sender, listener)
          iFinished = True
          playersFinished += 1
 
          os.system("clear")
          print(f"Terminou o jogo! {playersFinished}° lugar")
-      
+
       send(f"({hostId}tp00000000)", playersNum, sender, listener)
       bastao = False
       last_player = hostId
    else:
       print ("Jogada Inválida!")
+
+         
+           
+             
 
    
 def nextRound(playersNum, sender, listener):
@@ -285,13 +304,20 @@ def receive (sender, listener, playersNum):
             # Printa com tabs :)
             for i in range(int(rec_msg.origem)):
                print("\t", end="")
-            print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])}")
+
+            #se não tiver descartado coringas
+            if(rec_msg.jogada[4] == 0):
+               print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])}")
+            #se tiver descartado coringas
+            else:
+               print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])} e {int(rec_msg.jogada[4])} coringas")
 
             #Atualiza utlima carta e ultimo jogador
             last_played_card = int(rec_msg.jogada[2:4])
             last_player = int(rec_msg.origem)
 
-            if(rec_msg.jogada[4] == "1"):
+            #se recebe o bit de confirmação mais significativo como 1, o jogador passado terminou o jogo
+            if(rec_msg.jogada[5] == "1"):
                for i in range(int(rec_msg.origem)):
                   print("\t", end="")
                print (f"Jogador {rec_msg.origem} terminou!")
@@ -402,12 +428,19 @@ def main():
             print_personalDeck(personalDeck)
          elif(jogada[0] == "descartar"):
             if(len(jogada) == 1):
+               #caso não tenha digitado a carta e a quantidade a descartar, solicita
                print("Descartar _ _: ", end="")
                disc = input()
                disc = disc.split()
-               discard(int(disc[0]),   int(disc[1]), s, listen, playersNum)
+               if(len(disc) == 2):
+                  discard(int(disc[0]), int(disc[1]), s, listen, playersNum)
+               if(len(disc) == 5):
+                  discard(int(disc[0]), int(disc[1]), s, listen, playersNum, disc[3])
+
             elif(len(jogada) == 3):
                discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
+            elif(len(jogada) == 6):
+               discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum, disc[4])
             else:
                print("Erro na jogada!")
       else:
