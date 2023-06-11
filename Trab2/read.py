@@ -98,8 +98,8 @@ def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
    global last_player
 
    # Caso haja cartas suficientes, remove play_card por play_qtd vezes
-   print("play_card:" + str(play_card) + "play_qtd:" + str(play_qtd) + "jester_qtd:" + str(jester_qtd))
-   print("no deck " + str(personalDeck.count(play_card)) + "cartas" + str(play_card) + " e " + str(personalDeck.count(jester)) + " jester")
+   print("play_card: " + str(play_card) + "play_qtd: " + str(play_qtd) + "jester_qtd: " + str(jester_qtd))
+   print("no deck " + str(personalDeck.count(play_card)) + " cartas " + str(play_card) + " e " + str(personalDeck.count(jester)) + " jester")
    if((personalDeck.count(play_card) >= play_qtd    #caso haja cartas suficientes
       and play_card < last_played_card              #caso as cartas sejam de maior prioridade  >>>> falta numero de cartas
       and personalDeck.count(jester) >= jester_qtd)):
@@ -136,6 +136,14 @@ def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
       last_player = hostId
    else:
       print ("Jogada Inválida!")
+      if(not(personalDeck.count(play_card) >= play_qtd)):
+          print ("cartas insuficientes no baralho")
+      if(not(play_card < last_played_card)):
+          print ("última carta jogada é menor")
+      if(not(personalDeck.count(jester) >= jester_qtd)):
+          print ("coringas insuficientes no baralho")
+      print("última carta jogada foi " + str(last_played_card))
+
 
          
            
@@ -308,7 +316,7 @@ def receive (sender, listener, playersNum):
                print("\t", end="")
 
             #se não tiver descartado coringas
-            if(rec_msg.jogada[4] == 0):
+            if(rec_msg.jogada[4] == "0"):
                print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])}")
             #se tiver descartado coringas
             else:
@@ -317,6 +325,8 @@ def receive (sender, listener, playersNum):
             #Atualiza utlima carta e ultimo jogador
             last_played_card = int(rec_msg.jogada[2:4])
             last_player = int(rec_msg.origem)
+            print("A última carta jogada pelo jogdador" + str(rec_msg.origem) + "foi de " + str(last_played_card))
+
 
             #se recebe o bit de confirmação mais significativo como 1, o jogador passado terminou o jogo
             if(rec_msg.jogada[5] == "1"):
