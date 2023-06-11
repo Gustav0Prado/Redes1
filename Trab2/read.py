@@ -160,7 +160,8 @@ def nextRound(playersNum, sender, listener):
    print(personalDeck)
    last_played_card = 1000
 
-   send(f"({hostId}nr00000000)", playersNum, sender, listener)
+   if bastao:
+      send(f"({hostId}nr00000000)", playersNum, sender, listener)
 
 
 def the_deal(deck, playersNum, sender, listener):
@@ -353,9 +354,7 @@ def receive (sender, listener, playersNum):
 
          # next round
          elif(rec_msg.tipo == "nr"):
-            os.system("clear")
-            print ("Rodada terminou, reseta nível de descarte")
-            print(personalDeck)
+            nextRound(playersNum, sender, listener)
          
             # Confirma recebimento e passa pra frente
             rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
