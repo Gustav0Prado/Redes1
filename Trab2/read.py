@@ -154,11 +154,13 @@ def nextRound(playersNum, sender, listener):
    """Passa mensagem para limpar telas
    """
    global last_played_card
+   global last_player
 
    os.system("clear")
    print ("Rodada terminou, reseta nível de descarte")
    print(personalDeck)
    last_played_card = 1000
+   last_player = -1
 
    if bastao:
       send(f"({hostId}nr00000000)", playersNum, sender, listener)
