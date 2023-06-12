@@ -295,6 +295,8 @@ def receive (sender, listener, playersNum):
    if iFinished:
       if(rec_msg.tipo == "hd" and rec_msg.jogada[-1] == "1"):
          playersFinished.append(int(rec_msg.origem))
+      if last_player == hostId:
+         nextRound(playersNum, sender, listener)
 
       rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
       sender.sendto(str(rec_msg).encode(), (ips[nextHost], int(portas[nextHost])) )
@@ -436,7 +438,7 @@ def main():
          receive(s, listen, playersNum)
 
       elif (bastao):
-         if ((last_player == hostId) or (last_player in playersFinished)):
+         if (last_player == hostId):
             nextRound(playersNum, s, listen)
 
          termios.tcflush(sys.stdin, termios.TCIOFLUSH)
