@@ -433,7 +433,7 @@ def main():
          receive(s, listen, playersNum)
 
       elif (bastao):
-         if (last_player == hostId):
+         if ((last_player == hostId) or (last_player in playersFinished)):
             nextRound(playersNum, s, listen)
 
          termios.tcflush(sys.stdin, termios.TCIOFLUSH)
