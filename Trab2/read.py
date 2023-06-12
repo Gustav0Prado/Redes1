@@ -1,17 +1,17 @@
 #!/usr/bin/python3
 
-import socket, random, os
+import socket, random, os, sys, termios
 
 ips = []
 portas = []
 personalDeck = []
 passControler = []
+playersFinished = []
 bastao = False
 dealing = True
 iFinished = False
 hostId = 0
 nextHost = 0
-playersFinished = 0
 last_played_card = 1000
 last_played_qtd = 1000
 last_player = -1
@@ -55,11 +55,13 @@ def init_deck (deck):
    Args:
       deck (list): Lista onde o baralho será iniciado
    """
-   for i in range (0, 13):
-      for j in range (0, i):
-         deck.append(i)
+   # for i in range (0, 13):
+   #    for j in range (0, i):
+   #       deck.append(i)
 
    #appending jesters
+   deck.append(13)
+   deck.append(13)
    deck.append(13)
    deck.append(13)
    random.shuffle(deck)
@@ -129,10 +131,10 @@ def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
       else:
          send(f"({hostId}hd{play_qtd:02d}{play_card:02d}{jester_qtd}100000000)", playersNum, sender, listener)
          iFinished = True
-         playersFinished += 1
+         playersFinished.append(hostId)
 
          os.system("clear")
-         print(f"Terminou o jogo! {playersFinished}° lugar")
+         print(f"Terminou o jogo! {len(playersFinished)}° lugar")
 
       send(f"({hostId}tp00000000)", playersNum, sender, listener)
       bastao = False
@@ -292,7 +294,7 @@ def receive (sender, listener, playersNum):
    # Caso ja tenha terminado, apenas repassa mensagens
    if iFinished:
       if(rec_msg.tipo == "hd" and rec_msg.jogada[-1] == "1"):
-         playersFinished += 1
+         playersFinished.append(rec_msg.origem)
 
       rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
       sender.sendto(str(rec_msg).encode(), (ips[nextHost], int(portas[nextHost])) )
@@ -332,10 +334,9 @@ def receive (sender, listener, playersNum):
                print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])} e {int(rec_msg.jogada[4])} coringas")
 
             #Atualiza utlima carta e ultimo jogador
-            last_played_qtd  = int(rec_msg.jogada[:2])
+            last_played_qtd  = int(rec_msg.jogada[:2]) + int(rec_msg.jogada[4])
             last_played_card = int(rec_msg.jogada[2:4])
             last_player      = int(rec_msg.origem)
-            print("A última carta jogada pelo jogdador" + str(rec_msg.origem) + "foi de " + str(last_played_card))
 
 
             #se recebe o bit de confirmação mais significativo como 1, o jogador passado terminou o jogo
@@ -343,7 +344,7 @@ def receive (sender, listener, playersNum):
                for i in range(int(rec_msg.origem)):
                   print("\t", end="")
                print (f"Jogador {rec_msg.origem} terminou!")
-               playersFinished += 1
+               playersFinished.append(rec_msg.origem)
 
             rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
             send(str(rec_msg), playersNum, sender, listener)
@@ -435,6 +436,7 @@ def main():
          if (last_player == hostId):
             nextRound(playersNum, s, listen)
 
+         termios.tcflush(sys.stdin, termios.TCIOFLUSH)
          print("_________________________________________________")
          print(f"Jogador {hostId}, é sua vez! qual sua ação? Digite ver_comandos")
          print (">>>", end="")
@@ -468,5 +470,9 @@ def main():
 
       if playersFinished == playersNum:
          partida = False
+
+
+   print(playersFinished)
+
 if __name__ == "__main__":
       main()
