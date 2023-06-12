@@ -295,8 +295,11 @@ def receive (sender, listener, playersNum):
    if iFinished:
       if(rec_msg.tipo == "hd" and rec_msg.jogada[-1] == "1"):
          playersFinished.append(int(rec_msg.origem))
-      if last_player == hostId:
-         nextRound(playersNum, sender, listener)
+      if(rec_msg.tipo == "tp"):
+         bastao = True
+         if last_player == hostId:
+            nextRound(playersNum, sender, listener)
+         bastao = False
 
       rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
       sender.sendto(str(rec_msg).encode(), (ips[nextHost], int(portas[nextHost])) )
