@@ -365,7 +365,9 @@ def receive (sender, listener, playersNum):
          # next round
          elif(rec_msg.tipo == "nr"):
             nextRound(playersNum, sender, listener)
-         
+
+            print (rec_msg.origem)
+
             # Confirma recebimento e passa pra frente
             rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
             send(str(rec_msg), playersNum, sender, listener)
