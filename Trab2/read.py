@@ -131,7 +131,7 @@ def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
       else:
          send(f"({hostId}hd{play_qtd:02d}{play_card:02d}{jester_qtd}100000000)", playersNum, sender, listener)
          iFinished = True
-         playersFinished.append(hostId)
+         playersFinished.append(int(hostId))
 
          os.system("clear")
          print(f"Terminou o jogo! {len(playersFinished)}° lugar")
@@ -294,7 +294,7 @@ def receive (sender, listener, playersNum):
    # Caso ja tenha terminado, apenas repassa mensagens
    if iFinished:
       if(rec_msg.tipo == "hd" and rec_msg.jogada[-1] == "1"):
-         playersFinished.append(rec_msg.origem)
+         playersFinished.append(int(rec_msg.origem))
 
       rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
       sender.sendto(str(rec_msg).encode(), (ips[nextHost], int(portas[nextHost])) )
@@ -344,7 +344,7 @@ def receive (sender, listener, playersNum):
                for i in range(int(rec_msg.origem)):
                   print("\t", end="")
                print (f"Jogador {rec_msg.origem} terminou!")
-               playersFinished.append(rec_msg.origem)
+               playersFinished.append(int(rec_msg.origem))
 
             rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
             send(str(rec_msg), playersNum, sender, listener)
