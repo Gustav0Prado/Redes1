@@ -13,6 +13,7 @@ hostId = 0
 nextHost = 0
 playersFinished = 0
 last_played_card = 1000
+last_played_qtd = 1000
 last_player = -1
 jester = 13
 
@@ -95,13 +96,15 @@ def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
    global playersFinished
    global bastao
    global last_played_card
+   global last_played_qtd
    global last_player
 
    # Caso haja cartas suficientes, remove play_card por play_qtd vezes
    print("play_card: " + str(play_card) + "play_qtd: " + str(play_qtd) + "jester_qtd: " + str(jester_qtd))
    print("no deck " + str(personalDeck.count(play_card)) + " cartas " + str(play_card) + " e " + str(personalDeck.count(jester)) + " jester")
-   if((personalDeck.count(play_card) >= play_qtd    #caso haja cartas suficientes
-      and play_card < last_played_card              #caso as cartas sejam de maior prioridade  >>>> falta numero de cartas
+   if((personalDeck.count(play_card) >= play_qtd                                       #caso haja cartas suficientes
+      and ((play_qtd+jester_qtd == last_played_qtd) or (last_played_qtd == 1000))      #quantidade de cartas deve ser igual
+      and play_card < last_played_card                                                 #caso as cartas sejam de maior prioridade  >>>> falta numero de cartas
       and personalDeck.count(jester) >= jester_qtd)):
       #remove as cartas play_card por play_qtd vezes
       for i in range(play_qtd):
@@ -154,12 +157,14 @@ def nextRound(playersNum, sender, listener):
    """Passa mensagem para limpar telas
    """
    global last_played_card
+   global last_played_qtd
    global last_player
 
    os.system("clear")
    print ("Rodada terminou, reseta nível de descarte")
    print(personalDeck)
    last_played_card = 1000
+   last_played_qtd = 1000
    last_player = -1
 
    if bastao:
@@ -275,6 +280,7 @@ def receive (sender, listener, playersNum):
    global dealing
    global playersFinished
    global last_played_card
+   global last_played_qtd
    global last_player
 
    rec_data, addr = listener.recvfrom(1024)
@@ -326,8 +332,9 @@ def receive (sender, listener, playersNum):
                print(f"Jogador {rec_msg.origem} descartou {int(rec_msg.jogada[:2])} carta(s) {int(rec_msg.jogada[2:4])} e {int(rec_msg.jogada[4])} coringas")
 
             #Atualiza utlima carta e ultimo jogador
+            last_played_qtd  = int(rec_msg.jogada[:2])
             last_played_card = int(rec_msg.jogada[2:4])
-            last_player = int(rec_msg.origem)
+            last_player      = int(rec_msg.origem)
             print("A última carta jogada pelo jogdador" + str(rec_msg.origem) + "foi de " + str(last_played_card))
 
 
