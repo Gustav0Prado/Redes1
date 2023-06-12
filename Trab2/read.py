@@ -428,6 +428,7 @@ def main():
 
    #partida acaba quando todos os jogadores tiverem mãos vazias
    while(partida):
+      print (playersFinished, "já terminaram")
       # Caso já tenha terminado ou não tenha o bastão, apenas repassa mensagens
       if iFinished or (not bastao):
          receive(s, listen, playersNum)
@@ -441,28 +442,29 @@ def main():
          print(f"Jogador {hostId}, é sua vez! qual sua ação? Digite ver_comandos")
          print (">>>", end="")
          jogada = input()
-         jogada = jogada.split()
-         if  ((jogada[0] == "ver_comandos") or (jogada[0] == "vc")):
-            ver_comandos()
-         elif((jogada[0] == "passo") or (jogada[0] == "p")):
-            pass_turn(playersNum, s, listen)
-         elif((jogada[0] == "ver_deck") or (jogada [0] == "vd")):
-            print_personalDeck(personalDeck)
-         elif((jogada[0] == "descartar") or (jogada[0] == "d")):
-            if(len(jogada) == 1):
-               #caso não tenha digitado a carta e a quantidade a descartar, solicita
-               print("Descartar _ _: ", end="")
-               disc = input()
-               disc = disc.split()
-               if(len(disc) == 2):
-                  discard(int(disc[0]), int(disc[1]), s, listen, playersNum)
-               if(len(disc) == 5):
-                  discard(int(disc[0]), int(disc[1]), s, listen, playersNum, int(disc[3]))
+         if len(jogada) > 0:
+            jogada = jogada.split()
+            if  ((jogada[0] == "ver_comandos") or (jogada[0] == "vc")):
+               ver_comandos()
+            elif((jogada[0] == "passo") or (jogada[0] == "p")):
+               pass_turn(playersNum, s, listen)
+            elif((jogada[0] == "ver_deck") or (jogada [0] == "vd")):
+               print_personalDeck(personalDeck)
+            elif((jogada[0] == "descartar") or (jogada[0] == "d")):
+               if(len(jogada) == 1):
+                  #caso não tenha digitado a carta e a quantidade a descartar, solicita
+                  print("Descartar _ _: ", end="")
+                  disc = input()
+                  disc = disc.split()
+                  if(len(disc) == 2):
+                     discard(int(disc[0]), int(disc[1]), s, listen, playersNum)
+                  if(len(disc) == 5):
+                     discard(int(disc[0]), int(disc[1]), s, listen, playersNum, int(disc[3]))
 
-            elif(len(jogada) == 3):
-               discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
-            elif(len(jogada) == 6):
-               discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum, int(jogada[4]))
+               elif(len(jogada) == 3):
+                  discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
+               elif(len(jogada) == 6):
+                  discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum, int(jogada[4]))
             else:
                print("Erro na jogada!")
       else:
