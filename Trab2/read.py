@@ -428,7 +428,7 @@ def main():
 
    #partida acaba quando todos os jogadores tiverem mãos vazias
    while(partida):
-      print (playersFinished, "já terminaram")
+      print (playersFinished, "já terminaram - last_player: ", last_player, last_player in playersFinished)
       # Caso já tenha terminado ou não tenha o bastão, apenas repassa mensagens
       if iFinished or (not bastao):
          receive(s, listen, playersNum)
