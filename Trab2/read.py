@@ -55,13 +55,11 @@ def init_deck (deck):
    Args:
       deck (list): Lista onde o baralho será iniciado
    """
-   # for i in range (0, 13):
-   #    for j in range (0, i):
-   #       deck.append(i)
+   for i in range (0, 13):
+      for j in range (0, i):
+         deck.append(i)
 
    #appending jesters
-   deck.append(13)
-   deck.append(13)
    deck.append(13)
    deck.append(13)
    random.shuffle(deck)
@@ -435,7 +433,6 @@ def main():
 
    #partida acaba quando todos os jogadores tiverem mãos vazias
    while(partida):
-      print (playersFinished, "já terminaram - last_player: ", last_player, last_player in playersFinished)
       # Caso já tenha terminado ou não tenha o bastão, apenas repassa mensagens
       if iFinished or (not bastao):
          receive(s, listen, playersNum)
@@ -480,8 +477,13 @@ def main():
       if playersFinished == playersNum:
          partida = False
 
-
-   print(playersFinished)
+   if os.path.exists("conf.txt"):
+      os.remove("conf.txt")
+   with open("conf.txt", "x") as f:
+      f.write(f"{playersNum}\n")
+      for player in playersFinished:
+         f.write(f"{ips[player]} {portas[player]}\n")
+   
 
 if __name__ == "__main__":
       main()
