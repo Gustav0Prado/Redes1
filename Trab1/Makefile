@@ -2,7 +2,7 @@
 
 all : main
 
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -lcrypto
 
 main: socket.o comandos.o pacote.o main.c
 	gcc -o main main.c socket.o comandos.o pacote.o $(CFLAGS)

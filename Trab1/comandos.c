@@ -1,9 +1,4 @@
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include "comandos.h"
-#include "pacote.h"
+#include "utils.h"
 
 /**
  * @brief Retorna codigo correspondente a string de um comando
@@ -45,11 +40,23 @@ void cdLocal(char *caminho){
  */
 void backup1Arquivo(char *arquivo){
    // Checa se arquivo existe
-   if(access(arquivo, F_OK) == 0){
+   if(access(arquivo, R_OK) == 0){
       //envia mensagem de inicio com o nome do arquivo
       //espera ok
       enviaArquivo(arquivo);
       //envia fim
+   }
+   else{
+      printf("Erro ao abrir arquivo: ");
+      switch(errno){
+         case ENOENT:
+            printf("arquivo não existe\n");
+            break;
+
+         case EACCES:
+            printf("arquivo sem permissão de leitura\n");
+            break;
+      }
    }
 }
 
@@ -67,4 +74,69 @@ void backupVariosArquivo(char *regex){
                Se sim, backup1Arquivo
          Passa pro proximo
    */
+   char expr[64];
+   FILE *arq;
+
+   printf("Digite o nome do arquivo desejado: ");
+   fgets(expr, 64, stdin);
+   expr[strlen(expr)-1] = '\0';
+
+
+   int i=0;
+   glob_t globbuf;
+
+   if (glob(expr, 0, NULL, &globbuf) == 0) {
+      for (i=0; i <globbuf.gl_pathc; i++) { 
+         printf("%s\n",globbuf.gl_pathv[i]);
+      }
+      globfree(&globbuf);
+   }
+}
+
+/**
+ * @brief Cria MD5 para um arquivo e o retorna no vetor c
+ * 
+ * @param arquivo Nome do arquivo
+ * @param c Vetor de unsigned char com md5 gerado --> PRECISA TER TAMANHO MD5_DIGEST_LENGTH <--
+ */
+void geraMD5(char *arquivo, unsigned char* c){
+   MD5_CTX mdContext;
+   FILE *arq;
+   struct stat st;
+   char arquivo[64];
+   unsigned char data[1024];
+
+   // Tenta abrir arquivo desejado
+   arq = fopen(arquivo, "r");
+   if (arq == NULL) {
+      /* Retornar pacote com erro */
+      printf ("Arquivo %s não existe!\n", arquivo);
+      return 0;
+   }
+
+   // Gera tamanho do arquivo
+   stat(arquivo, &st);
+   long tamanho = st.st_size;
+
+   //Inicia MD5
+   MD5_Init (&mdContext);
+   
+   // Lê arquivo e atualiza md5 para cada bloco lido
+   for(int i = 0; i < tamanho - tamanho%63; i+=63){
+      fread(data, 1, 63, arq);
+      MD5_Update (&mdContext, data, 63);
+   }
+   fread(data, 1, tamanho%63, arq);
+   MD5_Update (&mdContext, data, tamanho%63);
+
+   //finaliza md5
+   MD5_Final (c,&mdContext);
+
+   //Printa MD5 na tela
+   // for(int i = 0; i < MD5_DIGEST_LENGTH; i++){
+   //    printf("%02x", c[i]);
+   // }
+   // printf("\n");
+
+   fclose (arq);
 }

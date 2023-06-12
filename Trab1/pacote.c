@@ -1,10 +1,4 @@
-#include "pacote.h"
-#include <string.h>
-#include <stdio.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include "utils.h"
 
 /**
  * @brief Divide e envia o arquivo indicado
@@ -50,7 +44,16 @@ void escreveParte(char *arquivo, unsigned char *dados, int tamanho){
    // Cria novo arquivo em modo append, para acumular os dados dos pacotes
    arq = fopen(arquivo, "a");
    if(arq == NULL){
-      printf("\tERRO ao abrir arquivo\n");
+      printf("Erro ao abrir arquivo: ");
+      switch(errno){
+         case ENOSPC:
+            // Manda pacote com erro
+            break;
+         
+         case EACCES:
+            // Manda pacote com erro
+            break;
+      }
    }
 
    // Escreve dados no arquivo
