@@ -100,8 +100,6 @@ def discard(play_qtd, play_card, sender, listener, playersNum, jester_qtd = 0):
    global last_player
 
    # Caso haja cartas suficientes, remove play_card por play_qtd vezes
-   print("play_card: " + str(play_card) + "play_qtd: " + str(play_qtd) + "jester_qtd: " + str(jester_qtd))
-   print("no deck " + str(personalDeck.count(play_card)) + " cartas " + str(play_card) + " e " + str(personalDeck.count(jester)) + " jester")
    if((personalDeck.count(play_card) >= play_qtd                                       #caso haja cartas suficientes
       and ((play_qtd+jester_qtd == last_played_qtd) or (last_played_qtd == 1000))      #quantidade de cartas deve ser igual
       and play_card < last_played_card                                                 #caso as cartas sejam de maior prioridade  >>>> falta numero de cartas
@@ -162,7 +160,6 @@ def nextRound(playersNum, sender, listener):
 
    os.system("clear")
    print ("Rodada terminou, reseta nível de descarte")
-   print(personalDeck)
    last_played_card = 1000
    last_played_qtd = 1000
    last_player = -1
@@ -369,8 +366,6 @@ def receive (sender, listener, playersNum):
          elif(rec_msg.tipo == "nr"):
             nextRound(playersNum, sender, listener)
 
-            print (rec_msg.origem)
-
             # Confirma recebimento e passa pra frente
             rec_msg.confirmacao = flip_bit(rec_msg.confirmacao, hostId)
             send(str(rec_msg), playersNum, sender, listener)
@@ -428,7 +423,7 @@ def main():
          receive(s, listen, playersNum)
    
    personalDeck.sort()
-   print(f"{personalDeck} - {len(personalDeck)}")
+   print_personalDeck(personalDeck)
    partida = True
 
    #partida acaba quando todos os jogadores tiverem mãos vazias
@@ -441,19 +436,22 @@ def main():
          if (last_player == hostId):
             nextRound(playersNum, s, listen)
 
-         termios.tcflush(sys.stdin, termios.TCIOFLUSH)
          print("_________________________________________________")
          print(f"Jogador {hostId}, é sua vez! qual sua ação? Digite ver_comandos")
          print (">>>", end="")
+
          jogada = input()
          if len(jogada) > 0:
             jogada = jogada.split()
             if  ((jogada[0] == "ver_comandos") or (jogada[0] == "vc")):
                ver_comandos()
+
             elif((jogada[0] == "passo") or (jogada[0] == "p")):
                pass_turn(playersNum, s, listen)
+
             elif((jogada[0] == "ver_deck") or (jogada [0] == "vd")):
                print_personalDeck(personalDeck)
+
             elif((jogada[0] == "descartar") or (jogada[0] == "d")):
                if(len(jogada) == 1):
                   #caso não tenha digitado a carta e a quantidade a descartar, solicita
@@ -467,16 +465,21 @@ def main():
 
                elif(len(jogada) == 3):
                   discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum)
+
                elif(len(jogada) == 6):
                   discard(int(jogada[1]), int(jogada[2]), s, listen, playersNum, int(jogada[4]))
             else:
                print("Erro na jogada!")
-      else:
-         receive(s,listen, playersNum)
 
-      if playersFinished == playersNum:
+      if len(playersFinished) == playersNum-1:
          partida = False
+         if hostId not in playersFinished:
+            playersFinished.append(hostId)
 
+   # Fim do jogo
+   os.system("sl")
+
+   #Reescreve configuracao de acordo com ranking
    if os.path.exists("conf.txt"):
       os.remove("conf.txt")
    with open("conf.txt", "x") as f:
