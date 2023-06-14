@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import socket, random, os, sys, termios
+import socket, random, os
 
 ips = []
 portas = []
@@ -158,11 +158,12 @@ def nextRound(playersNum, sender, listener):
    global last_played_qtd
    global last_player
 
-   os.system("clear")
-   print ("Rodada terminou, reseta nível de descarte")
-   last_played_card = 1000
-   last_played_qtd = 1000
-   last_player = -1
+   if not iFinished:
+      os.system("clear")
+      print ("Rodada terminou, reseta nível de descarte")
+      last_played_card = 1000
+      last_played_qtd = 1000
+      last_player = -1
 
    if bastao:
       send(f"({hostId}nr00000000)", playersNum, sender, listener)
@@ -473,19 +474,24 @@ def main():
 
       if len(playersFinished) == playersNum-1:
          partida = False
-         if hostId not in playersFinished:
-            playersFinished.append(hostId)
 
    # Fim do jogo
    os.system("sl")
 
    #Reescreve configuracao de acordo com ranking
-   if os.path.exists("conf.txt"):
-      os.remove("conf.txt")
-   with open("conf.txt", "x") as f:
-      f.write(f"{playersNum}\n")
-      for player in playersFinished:
-         f.write(f"{ips[player]} {portas[player]}\n")
+   if hostId not in playersFinished:
+      playersFinished.append(hostId)
+
+      #Remove configuração caso já exista
+      if os.path.exists("conf.txt"):
+         os.remove("conf.txt")
+
+      # Reescreve configuração de acordo com a classificação
+      with open("conf.txt", "x") as f:
+         f.write(f"{playersNum}\n")
+         for player in playersFinished:
+            # portas comecam em 19088
+            f.write(f"{ips[player]} { 19088 + playersFinished.index(player) }\n")
    
 
 if __name__ == "__main__":
