@@ -65,7 +65,7 @@ void backup1Arquivo(char *arquivo){
  * 
  * @param regex Expressão Regular dos arquivos desejados
  */
-void backupVariosArquivo(char *regex){
+void backupVariosArquivos(char *expr){
    /*
       Acessa diretorio
       Para cada arquivo
@@ -74,13 +74,7 @@ void backupVariosArquivo(char *regex){
                Se sim, backup1Arquivo
          Passa pro proximo
    */
-   char expr[64];
    FILE *arq;
-
-   printf("Digite o nome do arquivo desejado: ");
-   fgets(expr, 64, stdin);
-   expr[strlen(expr)-1] = '\0';
-
 
    int i=0;
    glob_t globbuf;
@@ -103,7 +97,6 @@ void geraMD5(char *arquivo, unsigned char* c){
    MD5_CTX mdContext;
    FILE *arq;
    struct stat st;
-   char arquivo[64];
    unsigned char data[1024];
 
    // Tenta abrir arquivo desejado
@@ -111,7 +104,7 @@ void geraMD5(char *arquivo, unsigned char* c){
    if (arq == NULL) {
       /* Retornar pacote com erro */
       printf ("Arquivo %s não existe!\n", arquivo);
-      return 0;
+      return;
    }
 
    // Gera tamanho do arquivo

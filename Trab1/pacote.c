@@ -20,6 +20,7 @@ void enviaArquivo(char *arquivo){
 
    for(int i = 0; i < tamanho - tamanho%63; i+=63){
       fread(buff, sizeof(unsigned char), 63, arq);
+      send(socket, buff, 63, 0);
    }
    fread(buff, sizeof(unsigned char), tamanho%63, arq);
 

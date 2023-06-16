@@ -10,7 +10,7 @@ int main(int argc, char **argv){
    int servidor;
    int sequencia = 0;
    unsigned char msg[256];
-   unsigned char rcve[256];
+   unsigned char rcve[63];
    char entrada[256];
    char delimitador[3] = " \n";
    char *token;
@@ -45,18 +45,19 @@ int main(int argc, char **argv){
       }
    }
 
-   memset(rcve, 0, 256);
+   memset(rcve, 0, 63);
 
    if(servidor){
       while(1){
-         if(recv(socket, rcve, 256, 0) > 0){
-            printf("\tRecebeu mensagem: %s", rcve);
-            memset(rcve, 0, 256);
+         if(recv(socket, rcve, 63, 0) > 0){
+            escreveParte("ola.txt", rcve, 63);
+            memset(rcve, 0, 63);
          }
       }
    }
    else{
       while(1){
+         printf(">>> ");
          fgets(entrada, 256, stdin);
          token = strtok(entrada, delimitador);
 
@@ -78,11 +79,11 @@ int main(int argc, char **argv){
                break;
 
             case BACKUP_VARIOS:
-               backupVariosArquivo(token);
+               backupVariosArquivos(token);
                break;
 
             case LS:
-               system("ll");
+               system("ls -l");
                break;
 
             default:
