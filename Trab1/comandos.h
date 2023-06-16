@@ -5,5 +5,5 @@
 
 int codigoComando(char *token);
 void cdLocal(char *caminho);
-void backup1Arquivo(char *arquivo);
+void backup1Arquivo(int socket, char *arquivo);
 void backupVariosArquivos(char *expr);

@@ -50,7 +50,11 @@ int main(int argc, char **argv){
    if(servidor){
       while(1){
          if(recv(socket, rcve, 63, 0) > 0){
-            escreveParte("ola.txt", rcve, 63);
+            printf("recebeu: '%s'\n", rcve);
+
+            FILE *arq = fopen("ola.txt", "w");
+            fwrite(rcve, sizeof(unsigned char), 63, arq);
+            fclose(arq);
             memset(rcve, 0, 63);
          }
       }
@@ -67,7 +71,7 @@ int main(int argc, char **argv){
          else
             codigo = -1;
 
-         token = strtok(NULL, delimitador);
+         token = strtok(NULL, "\n");
 
          switch (codigo){
             case CDLOCAL:
@@ -75,7 +79,7 @@ int main(int argc, char **argv){
                break;
             
             case BACKUP_UM:
-               backup1Arquivo(token);
+               backup1Arquivo(socket, token);
                break;
 
             case BACKUP_VARIOS:
