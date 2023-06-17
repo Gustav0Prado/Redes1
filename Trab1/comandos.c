@@ -11,6 +11,8 @@ int codigoComando(char *token){
    if(strcmp(token, "backup_um") == 0)     return BACKUP_UM;
    if(strcmp(token, "backup_varios") == 0) return BACKUP_VARIOS;
    if(strcmp(token, "ls") == 0)            return LS;
+   if(strcmp(token, "md5") == 0)           return MD5;
+   if(strcmp(token, "quit") == 0)          return QUIT;
    else return -1;
 }
 
@@ -91,11 +93,12 @@ void backupVariosArquivos(char *expr){
  * @brief Cria MD5 para um arquivo e o retorna no vetor c
  * 
  * @param arquivo Nome do arquivo
- * @param c Vetor de unsigned char com md5 gerado --> PRECISA TER TAMANHO MD5_DIGEST_LENGTH <--
+ * @param c Vetor de unsigned char com md5 gerado
+ * 
+ * @return int Tamanho da string md5
  */
-void geraMD5(char *arquivo, unsigned char* c){
+int geraMD5(char *arquivo, unsigned char* md5){
    EVP_MD_CTX *mdctx;
-   unsigned char *md5_digest;
    FILE *arq;
    struct stat st;
    unsigned char data[1024];
@@ -106,7 +109,7 @@ void geraMD5(char *arquivo, unsigned char* c){
    if (arq == NULL) {
       /* Retornar pacote com erro */
       printf ("Arquivo %s não existe!\n", arquivo);
-      return;
+      return -1;
    }
 
    // Gera tamanho do arquivo
@@ -118,22 +121,22 @@ void geraMD5(char *arquivo, unsigned char* c){
    EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 
    // MD5_Update
-   for(int i = 0; i < tamanho - tamanho%63; i+=63){
-      fread(data, 1, 63, arq);
-      EVP_DigestUpdate(mdctx, data, 63);
+   for(int i = 0; i < tamanho/1024; i++){
+      fread(data, 1, 1024, arq);
+      EVP_DigestUpdate(mdctx, data, 1024);
    }
+   fread(data, 1, tamanho%1024, arq);
+   EVP_DigestUpdate(mdctx, data, tamanho%1024);
 
    // MD5_Final
-   md5_digest = (unsigned char *)OPENSSL_malloc(md5_digest_len);
+   unsigned char *md5_digest = (unsigned char *)OPENSSL_malloc(md5_digest_len);
    EVP_DigestFinal_ex(mdctx, md5_digest, &md5_digest_len);
    EVP_MD_CTX_free(mdctx);
 
-
-   //Printa MD5 na tela
-   // for(int i = 0; i < MD5_DIGEST_LENGTH; i++){
-   //    printf("%02x", c[i]);
-   // }
-   // printf("\n");
+   strcpy((char*)md5, (char*)md5_digest);
+   free(md5_digest);
 
    fclose (arq);
+
+   return md5_digest_len;
 }

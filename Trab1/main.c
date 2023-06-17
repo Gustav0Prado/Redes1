@@ -39,8 +39,6 @@ int main(int argc, char **argv){
    }
 
    memset(rcve, 0, 67);
-   // struct sockaddr_ll src_addr;
-   // socklen_t addr_len = sizeof src_addr;
 
    if(servidor){
       while(1){
@@ -58,7 +56,9 @@ int main(int argc, char **argv){
    else{
       while(1){
          printf(">>> ");
-         fgets(entrada, 256, stdin);
+         if(fgets(entrada, 256, stdin) == NULL){
+            exit(1);
+         }
          token = strtok(entrada, delimitador);
 
          int codigo;
@@ -84,6 +84,21 @@ int main(int argc, char **argv){
 
             case LS:
                system("ls -l");
+               break;
+            
+            case MD5:
+               unsigned char md5[1024];
+               int len = geraMD5(token, md5);
+
+               //Printa MD5 na tela
+               for(int i = 0; i < len; i++){
+                  printf("%02x", md5[i]);
+               }
+               printf("  %s\n", token);
+               break;
+
+            case QUIT:
+               exit(0);
                break;
 
             default:

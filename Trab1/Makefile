@@ -2,7 +2,7 @@
 
 all: main
 
-CFLAGS = -Wall -lcrypto
+CFLAGS = -Wall -lcrypto -g
 OBJECTS = utils.o comandos.o pacote.o socket.o
 
 %.o: %.c %.h

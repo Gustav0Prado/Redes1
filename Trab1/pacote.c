@@ -9,8 +9,7 @@ void enviaArquivo(int socket, char *arquivo, int *seq){
    FILE* arq;
    struct stat st;
    unsigned char buff[67];
-   unsigned char re[67];
-   int tam_read, rec;
+   int tam_read;
 
    buff[0] = 126;
    buff[3] = 5;
