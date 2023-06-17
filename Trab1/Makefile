@@ -1,20 +1,16 @@
 # ip -o -4 route show to default | awk '{print $5}'
 
-all : main
+all: main
 
-CFLAGS = -Wall -g -lcrypto
+CFLAGS = -Wall -lcrypto
+OBJECTS = utils.o comandos.o pacote.o socket.o
 
-main: socket.o comandos.o pacote.o main.c
-	gcc -o main main.c socket.o comandos.o pacote.o $(CFLAGS)
+%.o: %.c %.h
+	$(CC) $(CFLAGS) -c $<
 
-socket.o: socket.c
-	gcc -c socket.c $(CFLAGS)
+main: $(OBJECTS) main.c
+	gcc -o main main.c $(OBJECTS) $(CFLAGS)
 
-comandos.o: comandos.c
-	gcc -c comandos.c $(CFLAGS)
-
-pacote.h: pacote.c
-	gcc -c pacote.c $(CFLAGS)
 
 clean:
 	rm -rf ./*.o ./main

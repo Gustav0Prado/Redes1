@@ -5,14 +5,14 @@
  * 
  * @param arquivo Caminho para o arquivo a ser enviado
  */
-void enviaArquivo(int socket, char *arquivo){
+void enviaArquivo(int socket, char *arquivo, int *seq){
    FILE* arq;
    struct stat st;
    unsigned char buff[67];
-   int tam_read;
+   unsigned char re[67];
+   int tam_read, rec;
 
    buff[0] = 126;
-   buff[2] = 0;
    buff[3] = 5;
 
    stat(arquivo, &st);
@@ -23,15 +23,25 @@ void enviaArquivo(int socket, char *arquivo){
       printf("\tERRO ao abrir arquivo\n");
    }
 
-   for(int i = 0; i < tamanho - tamanho%63; i+=63){
+   for(int i = 0; i <= tamanho - tamanho%63; i+=63){
       tam_read = fread(buff+4, sizeof(unsigned char), 63, arq);
       buff[1] = tam_read;
+      buff[2] = *seq;
+      printf("%d\n", buff[2]);
       send(socket, buff, 67, 0);
+      (*seq) = ((*seq) + 1) % 256;
+      usleep(30000);
    }
+
    tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
    if(tam_read > 0){
+      tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
       buff[1] = tam_read;
+      buff[2] = *seq;
+      printf("%d\n", buff[2]);
       send(socket, buff, 67, 0);
+      (*seq) = ((*seq) + 1) % 256;
+      usleep(30000);
    }
 
    fclose(arq);

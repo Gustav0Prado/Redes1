@@ -38,13 +38,12 @@ void cdLocal(char *caminho){
  * 
  * @param arquivo Caminho para o arquivo com o backup a ser feito
  */
-void backup1Arquivo(int socket, char *arquivo){
-   printf("%s\n", arquivo);
+void backup1Arquivo(int socket, char *arquivo, int *seq){
    // Checa se arquivo existe
    if(access(arquivo, R_OK) == 0){
       //envia mensagem de inicio com o nome do arquivo
       //espera ok
-      enviaArquivo(socket, arquivo);
+      enviaArquivo(socket, arquivo, seq);
       //envia fim
    }
    else{
@@ -75,7 +74,7 @@ void backupVariosArquivos(char *expr){
                Se sim, backup1Arquivo
          Passa pro proximo
    */
-   FILE *arq;
+   //FILE *arq;
 
    int i=0;
    glob_t globbuf;
@@ -95,10 +94,12 @@ void backupVariosArquivos(char *expr){
  * @param c Vetor de unsigned char com md5 gerado --> PRECISA TER TAMANHO MD5_DIGEST_LENGTH <--
  */
 void geraMD5(char *arquivo, unsigned char* c){
-   MD5_CTX mdContext;
+   EVP_MD_CTX *mdctx;
+   unsigned char *md5_digest;
    FILE *arq;
    struct stat st;
    unsigned char data[1024];
+   unsigned int md5_digest_len = EVP_MD_size(EVP_md5());
 
    // Tenta abrir arquivo desejado
    arq = fopen(arquivo, "r");
@@ -112,19 +113,21 @@ void geraMD5(char *arquivo, unsigned char* c){
    stat(arquivo, &st);
    long tamanho = st.st_size;
 
-   //Inicia MD5
-   MD5_Init (&mdContext);
-   
-   // Lê arquivo e atualiza md5 para cada bloco lido
+   // MD5_Init
+   mdctx = EVP_MD_CTX_new();
+   EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
+
+   // MD5_Update
    for(int i = 0; i < tamanho - tamanho%63; i+=63){
       fread(data, 1, 63, arq);
-      MD5_Update (&mdContext, data, 63);
+      EVP_DigestUpdate(mdctx, data, 63);
    }
-   fread(data, 1, tamanho%63, arq);
-   MD5_Update (&mdContext, data, tamanho%63);
 
-   //finaliza md5
-   MD5_Final (c,&mdContext);
+   // MD5_Final
+   md5_digest = (unsigned char *)OPENSSL_malloc(md5_digest_len);
+   EVP_DigestFinal_ex(mdctx, md5_digest, &md5_digest_len);
+   EVP_MD_CTX_free(mdctx);
+
 
    //Printa MD5 na tela
    // for(int i = 0; i < MD5_DIGEST_LENGTH; i++){

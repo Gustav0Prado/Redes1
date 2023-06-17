@@ -1,22 +1,15 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include "socket.h"
-#include "comandos.h"
-#include "pacote.h"
+#include "utils.h"
 
 int main(int argc, char **argv){
    int servidor;
    int sequencia = 0;
-   unsigned char msg[256];
    unsigned char rcve[67];
    char entrada[256];
    char delimitador[3] = " \n";
    char *token;
    char lixo;
 
-   int socket = ConexaoRawSocket("eno1");
+   int socket = ConexaoRawSocket("lo");
 
    // Trata entrada
    if(argc == 1){
@@ -46,19 +39,19 @@ int main(int argc, char **argv){
    }
 
    memset(rcve, 0, 67);
+   // struct sockaddr_ll src_addr;
+   // socklen_t addr_len = sizeof src_addr;
 
    if(servidor){
       while(1){
-         if(recv(socket, rcve, 67, 0) > 0 && rcve[0] == 126){
-            printf("recebeu tam:  %d\n", rcve[1]);
-            printf("recebeu seq:  %d\n", rcve[2]);
-            printf("recebeu tipo: %d\n", rcve[3]);
+         if(recv(socket, rcve, 67, 0) > 0){
+            if(rcve[0] == 126 && rcve[2] == sequencia){
+               FILE *arq = fopen("./hello", "a");
+               fwrite(rcve+4, sizeof(unsigned char), (int)rcve[1], arq);
+               fclose(arq);
 
-            FILE *arq = fopen("./hello", "w");
-            fwrite(rcve+4, sizeof(unsigned char), 63, arq);
-            fclose(arq);
-
-            memset(rcve, 0, 67);
+               sequencia = (sequencia + 1) % 256;
+            }
          }
       }
    }
@@ -82,7 +75,7 @@ int main(int argc, char **argv){
                break;
             
             case BACKUP_UM:
-               backup1Arquivo(socket, token);
+               backup1Arquivo(socket, token, &sequencia);
                break;
 
             case BACKUP_VARIOS:
