@@ -8,7 +8,12 @@
 void enviaArquivo(int socket, char *arquivo){
    FILE* arq;
    struct stat st;
-   unsigned char buff[63];
+   unsigned char buff[67];
+   int tam_read;
+
+   buff[0] = 126;
+   buff[2] = 0;
+   buff[3] = 5;
 
    stat(arquivo, &st);
    long tamanho = st.st_size;
@@ -19,11 +24,15 @@ void enviaArquivo(int socket, char *arquivo){
    }
 
    for(int i = 0; i < tamanho - tamanho%63; i+=63){
-      fread(buff, sizeof(unsigned char), 63, arq);
+      tam_read = fread(buff+4, sizeof(unsigned char), 63, arq);
+      buff[1] = tam_read;
+      send(socket, buff, 67, 0);
    }
-   fread(buff, sizeof(unsigned char), tamanho%63, arq);
-   
-   send(socket, buff, 63, 0);
+   tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
+   if(tam_read > 0){
+      buff[1] = tam_read;
+      send(socket, buff, 67, 0);
+   }
 
    fclose(arq);
 }

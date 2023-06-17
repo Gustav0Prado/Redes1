@@ -10,7 +10,7 @@ int main(int argc, char **argv){
    int servidor;
    int sequencia = 0;
    unsigned char msg[256];
-   unsigned char rcve[63];
+   unsigned char rcve[67];
    char entrada[256];
    char delimitador[3] = " \n";
    char *token;
@@ -45,17 +45,20 @@ int main(int argc, char **argv){
       }
    }
 
-   memset(rcve, 0, 63);
+   memset(rcve, 0, 67);
 
    if(servidor){
       while(1){
-         if(recv(socket, rcve, 63, 0) > 0){
-            printf("recebeu: '%s'\n", rcve);
+         if(recv(socket, rcve, 67, 0) > 0 && rcve[0] == 126){
+            printf("recebeu tam:  %d\n", rcve[1]);
+            printf("recebeu seq:  %d\n", rcve[2]);
+            printf("recebeu tipo: %d\n", rcve[3]);
 
-            FILE *arq = fopen("ola.txt", "w");
-            fwrite(rcve, sizeof(unsigned char), 63, arq);
+            FILE *arq = fopen("./hello", "w");
+            fwrite(rcve+4, sizeof(unsigned char), 63, arq);
             fclose(arq);
-            memset(rcve, 0, 63);
+
+            memset(rcve, 0, 67);
          }
       }
    }
