@@ -40,7 +40,7 @@ void cdLocal(char *caminho){
  * 
  * @param arquivo Caminho para o arquivo com o backup a ser feito
  */
-void backup1Arquivo(int socket, char *arquivo, int *seq){
+void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
    // Checa se arquivo existe
    if(access(arquivo, R_OK) == 0){
       //envia mensagem de inicio com o nome do arquivo

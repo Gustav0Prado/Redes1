@@ -2,7 +2,8 @@
 
 int main(int argc, char **argv){
    int servidor;
-   int sequencia = 0;
+   seq_t seq;
+   seq.client = 0; seq.server =0;
    unsigned char rcve[67];
    char entrada[256];
    char delimitador[3] = " \n";
@@ -45,15 +46,35 @@ int main(int argc, char **argv){
    struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
+   pacote_t package;
+   char *filename;
+
    if(servidor){
       while(1){
+         
          if(recv(socket, rcve, 67, 0) > 0){
-            if(rcve[0] == 126 && rcve[2] == sequencia){
-               FILE *arq = fopen("./hello", "a");
-               fwrite(rcve+4, sizeof(unsigned char), (int)rcve[1], arq);
-               fclose(arq);
+            memcpy(&package, rcve, 3);
+            if(package.ini == 126 && package.seq == seq.client){
+               switch (package.tipo)
+               {
+               case T_BACKUP_UM: //caso peça backup de um arquivo
+                  filename = malloc (package.tam);
+                  strncpy(filename, (char *)rcve+4, package.tam);
+                  if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
+                  {
+                     remove(filename);
+                  }
+                  break;
+               case T_DADOS://caso esteja passando o pacote de dados
+                  FILE *arq = fopen(filename, "a");
+                  fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
+                  fclose(arq);
+                  break;
+               default:
+                  break;
+               }
 
-               sequencia = (sequencia + 1) % 256;
+               seq.client = (seq.client + 1) % 256;
             }
          }
       }
@@ -80,7 +101,7 @@ int main(int argc, char **argv){
                break;
             
             case BACKUP_UM:
-               backup1Arquivo(socket, token, &sequencia);
+               backup1Arquivo(socket, token, &seq);
                break;
 
             case BACKUP_VARIOS:

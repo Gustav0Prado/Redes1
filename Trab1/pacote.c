@@ -12,7 +12,7 @@ void clearLines(){
  * 
  * @param arquivo Caminho para o arquivo a ser enviado
  */
-void enviaArquivo(int socket, char *arquivo, int *seq){
+void enviaArquivo(int socket, char *arquivo, seq_t *seq){
    FILE* arq;
    struct stat st;
    unsigned char buff[67];
@@ -24,7 +24,7 @@ void enviaArquivo(int socket, char *arquivo, int *seq){
 
    // Manda nome do arquivo
    p.ini  = 126;
-   p.seq  = *seq;
+   p.seq  = (*seq).client;
    p.tipo = T_BACKUP_UM;
    p.tam  = strlen(arquivo);
    send(socket, arquivo, strlen(arquivo), 0);
@@ -39,24 +39,28 @@ void enviaArquivo(int socket, char *arquivo, int *seq){
 
    for(int i = 0; i <= tamanho - tamanho%63; i+=63){
       tam_read = fread(buff+4, sizeof(unsigned char), 63, arq);
-      buff[1] = tam_read;
-      buff[2] = *seq;
+      p.tam = tam_read;
+      p.seq = (*seq).client;
+
+      memcpy(buff, &p, 3);
 
       clearLines();
       printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
       
       send(socket, buff, 67, 0);
-      (*seq) = ((*seq) + 1) % 256;
+      ((*seq).client) = (((*seq).client) + 1) % 256;
    }
 
    tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
    if(tam_read > 0){
       tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
-      buff[1] = tam_read;
-      buff[2] = *seq;
+      p.tam = tam_read;
+      p.seq = (*seq).client;
+
+      memcpy(buff, &p, 3);
    
       send(socket, buff, 67, 0);
-      (*seq) = ((*seq) + 1) % 256;
+      ((*seq).client) = (((*seq).client) + 1) % 256;
    }
 
    fclose(arq);

@@ -1,3 +1,5 @@
+#pragma once
+
 typedef struct  __attribute__((packed, scalar_storage_order("big-endian"))) {
    unsigned int ini  : 8;
    unsigned int tam  : 6;
@@ -11,5 +13,5 @@ typedef struct seq_t
     unsigned int server:6;
 }seq_t;
 
-void enviaArquivo(int socket, char *arquivo, int *seq);
+void enviaArquivo(int socket, char *arquivo, seq_t *seq);
 void escreveParte(char *arquivo, unsigned char *dados, int tamanho);
