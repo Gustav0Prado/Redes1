@@ -49,7 +49,7 @@ int main(int argc, char **argv){
    //setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
    pacote_t package;
-   char *filename;
+   char filename[63];
    int cont = 0;
    if(servidor){
       while(1){
@@ -59,12 +59,11 @@ int main(int argc, char **argv){
             //printf("o rcve[0] é %d\n ", rcve[0]);
             if(package.ini == 126 && package.seq == seq.client){
                
-               printf( "Recebeu %d pacotes e o último recebido foi %d \n", cont++, package.seq);
+               printf( "Recebeu tipo %d \n", package.tipo);
 
                switch (package.tipo)
                {
                case T_BACKUP_UM: //caso peça backup de um arquivo
-                  filename = malloc (63);
                   strncpy(filename, (char *)rcve+4, package.tam);
                   printf( "Pediu backup de %s\n", filename);
                   if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
@@ -90,6 +89,22 @@ int main(int argc, char **argv){
                   send(socket, buffer_resposta, sizeof(buffer_resposta) , 0);
 
                   break;
+               case T_CD_REMOTO://pede para trocar o diretório do server
+
+                  strncpy(filename, (char *)rcve+4, package.tam);
+                  printf("pediu para mudar diretório para %s\n", filename);
+                  cdLocal(filename);   
+                  char *diretorio_atual = getcwd(NULL,0);
+
+                  printf("diretório atual: %s \n", diretorio_atual);
+                  resposta.ini = 126;
+                  resposta.tipo = T_OK;
+                  resposta.seq = 0;
+                  memcpy(buffer_resposta, &resposta, 3);
+
+                  send(socket, buffer_resposta, sizeof(buffer_resposta) , 0);
+                  break;
+
                default:
                   break;
                }
