@@ -8,7 +8,7 @@
  */
 int codigoComando(char *token){
    if(strcmp(token, "cdlocal") == 0)       return CDLOCAL;
-   if(strcmp(token, "backup_um") == 0)     return BACKUP_UM;
+   if(strcmp(token, "bu") == 0)     return BACKUP_UM;
    if(strcmp(token, "backup_varios") == 0) return BACKUP_VARIOS;
    if(strcmp(token, "ls") == 0)            return LS;
    if(strcmp(token, "md5") == 0)           return MD5;
