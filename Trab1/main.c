@@ -135,6 +135,10 @@ int main(int argc, char **argv){
             case CDLOCAL:
                cdLocal(token);
                break;
+
+            case CDREMOTO:
+               cdRemoto(socket, token, &seq);
+               break;
             
             case BACKUP_UM:
                backup1Arquivo(socket, token, &seq);

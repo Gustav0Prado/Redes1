@@ -26,7 +26,7 @@ void enviaArquivo(int socket, char *arquivo, seq_t *seq){
    p.ini  = 126;
    p.seq  = (*seq).client;
    p.tipo = T_BACKUP_UM;
-   p.tam  = strlen(arquivo);
+   p.tam  = strlen(arquivo)+1;
 
    ((*seq).client) = (((*seq).client) + 1) % 64;
 
@@ -46,7 +46,7 @@ void enviaArquivo(int socket, char *arquivo, seq_t *seq){
    if(resposta.tipo == T_OK){
       p.tipo = T_DADOS;
       // Começa a mandar arquivo
-      //printf("\t%d%%\n", progress);
+      printf("\t%d%%\n", progress);
 
       arq = fopen(arquivo, "r");
       if(arq == NULL){
@@ -60,13 +60,11 @@ void enviaArquivo(int socket, char *arquivo, seq_t *seq){
             p.tam = tam_read;
             p.seq = (*seq).client;
 
-            memcpy(buff, &p, 3);
+            clearLines();
+            printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
 
-            // clearLines();
-            // printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
-            
-            int s = send(socket, buff, 67, 0);
-            printf("send: %02d - %02d - %03d\n", s, p.seq, ++progress);
+            memcpy(buff, &p, 3);            
+            send(socket, buff, 67, 0);
             
             //Aguarda ACK
             while(1){
@@ -88,10 +86,12 @@ void enviaArquivo(int socket, char *arquivo, seq_t *seq){
          p.tam = tam_read;
          p.seq = (*seq).client;
 
+
+         clearLines();
+         printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
+
          memcpy(buff, &p, 3);
-      
-         int s = send(socket, buff, 67, 0);
-         printf("send: %02d - %02d - %03d\n", s, p.seq, ++progress);
+         send(socket, buff, 67, 0);
 
          while(1){
                if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
