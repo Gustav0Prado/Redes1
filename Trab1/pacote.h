@@ -1,8 +1,8 @@
-typedef struct pacote{
-    unsigned char marcador, paridade;   // 8 bits de marcador e paridade
-    unsigned char tamanho : 6;          // 6 Bits de tamanho
-    unsigned char sequencia : 6;        // 6 bits de tamanho
-    unsigned char tipo : 4;             // 4 bits de tipo
+typedef struct  __attribute__((packed, scalar_storage_order("big-endian"))) {
+   unsigned int ini  : 8;
+   unsigned int tam  : 6;
+   unsigned int seq  : 6;
+   unsigned int tipo : 4;
 } pacote_t;
 
 void enviaArquivo(int socket, char *arquivo, int *seq);

@@ -9,7 +9,7 @@ int main(int argc, char **argv){
    char *token;
    char lixo;
 
-   int socket = ConexaoRawSocket("lo");
+   int socket = ConexaoRawSocket("eno1");
 
    // Trata entrada
    if(argc == 1){
@@ -39,6 +39,11 @@ int main(int argc, char **argv){
    }
 
    memset(rcve, 0, 67);
+
+   // Timeout de 10 segundos = 10000 milissegundos
+   int timeoutMillis = 10000;
+   struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
+   setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
    if(servidor){
       while(1){

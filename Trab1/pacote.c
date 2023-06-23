@@ -17,13 +17,19 @@ void enviaArquivo(int socket, char *arquivo, int *seq){
    struct stat st;
    unsigned char buff[67];
    int tam_read, progress = 0;
-
-   buff[0] = 126;
-   buff[3] = 5;
+   pacote_t p;
 
    stat(arquivo, &st);
    long tamanho = st.st_size;
 
+   // Manda nome do arquivo
+   p.ini  = 126;
+   p.seq  = *seq;
+   p.tipo = T_BACKUP_UM;
+   p.tam  = strlen(arquivo);
+   send(socket, arquivo, strlen(arquivo), 0);
+
+   // Começa a mandar arquivo
    printf("\t%d%%\n", progress);
 
    arq = fopen(arquivo, "r");
@@ -36,13 +42,11 @@ void enviaArquivo(int socket, char *arquivo, int *seq){
       buff[1] = tam_read;
       buff[2] = *seq;
 
-      //printf("%d\n", buff[2]);
       clearLines();
-      printf("\tEnviando... %.2f%%\n", (++progress/ (float) (tamanho/63)) * 100);
+      printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
       
       send(socket, buff, 67, 0);
       (*seq) = ((*seq) + 1) % 256;
-      usleep(1);
    }
 
    tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
@@ -50,12 +54,9 @@ void enviaArquivo(int socket, char *arquivo, int *seq){
       tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
       buff[1] = tam_read;
       buff[2] = *seq;
-      
-      //printf("%d\n", buff[2]);
-
+   
       send(socket, buff, 67, 0);
       (*seq) = ((*seq) + 1) % 256;
-      usleep(1);
    }
 
    fclose(arq);
