@@ -9,6 +9,8 @@ int main(int argc, char **argv){
    char delimitador[3] = " \n";
    char *token;
    char lixo;
+   pacote_t resposta;
+   unsigned char buffer_resposta[67];
 
    int socket = ConexaoRawSocket("eno1");
 
@@ -42,47 +44,66 @@ int main(int argc, char **argv){
    memset(rcve, 0, 67);
 
    // Timeout de 10 segundos = 10000 milissegundos
-   int timeoutMillis = 10000;
-   struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
-   setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
+   //int timeoutMillis = 10000;
+   //struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
+   //setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
    pacote_t package;
    char *filename;
-
+   int cont = 0;
    if(servidor){
       while(1){
-         
+
          if(recv(socket, rcve, 67, 0) > 0){
             memcpy(&package, rcve, 3);
+            //printf("o rcve[0] é %d\n ", rcve[0]);
             if(package.ini == 126 && package.seq == seq.client){
+               
+               printf( "Recebeu %d pacotes e o último recebido foi %d \n", cont++, package.seq);
+
                switch (package.tipo)
                {
                case T_BACKUP_UM: //caso peça backup de um arquivo
-                  filename = malloc (package.tam);
+                  filename = malloc (63);
                   strncpy(filename, (char *)rcve+4, package.tam);
+                  printf( "Pediu backup de %s\n", filename);
                   if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
                   {
-                     remove(filename);
+                     int retorno = remove(filename);
+                     printf("tentou remover e voltou %d\n", retorno);
                   }
+                  resposta.ini = 126;
+                  resposta.tipo = T_OK;
+                  resposta.seq = 0;
+                  memcpy(buffer_resposta, &resposta, 3);
+
+                  send(socket, buffer_resposta, sizeof(buffer_resposta) , 0);
                   break;
                case T_DADOS://caso esteja passando o pacote de dados
-                  FILE *arq = fopen(filename, "a");
+                  FILE *arq = fopen(filename, "a+");
                   fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
                   fclose(arq);
+                  resposta.ini = 126;
+                  resposta.tipo = T_ACK;
+                  resposta.seq = 3;
+                  memcpy(buffer_resposta, &resposta, 3);
+                  send(socket, buffer_resposta, sizeof(buffer_resposta) , 0);
+
                   break;
                default:
                   break;
                }
 
-               seq.client = (seq.client + 1) % 256;
+               seq.client = (seq.client + 1) % 64;
             }
          }
+
       }
    }
    else{
       while(1){
          printf(">>> ");
-         if(fgets(entrada, 256, stdin) == NULL){
+         if(fgets(entrada, 63, stdin) == NULL){
             exit(1);
          }
          token = strtok(entrada, delimitador);
