@@ -39,3 +39,7 @@
 #define T_OK               13
 #define T_ACK              14
 #define T_NACK             15
+
+extern int servidor;
+
+void escolheEntrada(int argc, char **argv);

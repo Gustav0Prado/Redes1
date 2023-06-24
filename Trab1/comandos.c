@@ -58,10 +58,14 @@ void cdRemoto(int socket, char *caminho, seq_t *seq){
 void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
    // Checa se arquivo existe
    if(access(arquivo, R_OK) == 0){
-      //envia mensagem de inicio com o nome do arquivo
-      //espera ok
-      enviaArquivo(socket, arquivo, seq);
-      //envia fim
+      if(strlen(arquivo) <= 63){
+         envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK, 0);
+         enviaArquivo(socket, arquivo, seq);
+         envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK, 0);
+      }
+      else{
+         printf("ERRO AO LER NOME DO ARUIVO: NOME MUITO GRANDE\n");
+      }
    }
    else{
       printf("Erro ao abrir arquivo: ");

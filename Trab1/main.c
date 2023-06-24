@@ -1,52 +1,24 @@
 #include "utils.h"
 
 int main(int argc, char **argv){
-   int servidor;
    seq_t seq;
    seq.client = 0; seq.server =0;
    unsigned char rcve[67];
    char entrada[256];
    char delimitador[3] = " \n";
    char *token;
-   char lixo;
-   pacote_t resposta;
-   unsigned char buffer_resposta[67];
 
    int socket = ConexaoRawSocket("enp3s0");
 
    // Trata entrada
-   if(argc == 1){
-      printf("0 - Cliente\n1 - Servidor\n");
-      scanf("%d", &servidor);
-      scanf("%c", &lixo);
-      system("clear");
-   }
-   else{
-      if(strcmp(argv[1], "cliente") == 0){
-         system("clear");
-         printf("Iniciado como cliente\n");
-         servidor = 0;
-      }
-      else if(strcmp(argv[1], "servidor") == 0){
-         system("clear");
-         printf("Iniciado como servidor\n");
-         servidor = 1;
-      }
-      else{
-         printf("Por favor selecione uma opção válida:\n");
-         printf("0 - Cliente\n1 - Servidor\n");
-         scanf("%d", &servidor);
-         scanf("%c", &lixo);
-         system("clear");
-      }
-   }
+   escolheEntrada(argc, argv);
 
    memset(rcve, 0, 67);
 
    // Timeout de 10 segundos = 10000 milissegundos
-   //int timeoutMillis = 10000;
-   //struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
-   //setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
+   int timeoutMillis = 1000;
+   struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
+   setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
    pacote_t package;
    char filename[63];
@@ -59,51 +31,47 @@ int main(int argc, char **argv){
             //printf("o rcve[0] é %d\n ", rcve[0]);
             if(package.ini == 126 && package.seq == seq.client){
                
-               printf( "Recebeu tipo %d \n", package.tipo);
+               //printf( "Recebeu tipo %d \n", package.tipo);
 
-               switch (package.tipo)
-               {
-               case T_BACKUP_UM: //caso peça backup de um arquivo
-                  strncpy(filename, (char *)rcve+4, package.tam);
-                  printf( "Pediu backup de %s\n", filename);
-                  if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
-                  {
-                     int retorno = remove(filename);
-                     printf("tentou remover e voltou %d\n", retorno);
-                  }
-                  resposta.ini = 126;
-                  resposta.tipo = T_OK;
-                  resposta.seq = 0;
-                  memcpy(buffer_resposta, &resposta, 3);
+               switch (package.tipo){
+                  case T_BACKUP_UM: //caso peça backup de um arquivo
+                     strncpy(filename, (char *)rcve+4, package.tam);
+                     //printf( "Pediu backup de %s\n", filename);
+                     if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
+                     {
+                        int retorno = remove(filename);
+                        //printf("tentou remover e voltou %d\n", retorno);
+                     }
+                     
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, 1);
 
-                  send(socket, buffer_resposta, sizeof(buffer_resposta) , 0);
-                  break;
-               case T_DADOS://caso esteja passando o pacote de dados
-                  FILE *arq = fopen(filename, "a+");
-                  fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
-                  fclose(arq);
-                  resposta.ini = 126;
-                  resposta.tipo = T_ACK;
-                  resposta.seq = 3;
-                  memcpy(buffer_resposta, &resposta, 3);
-                  send(socket, buffer_resposta, sizeof(buffer_resposta) , 0);
+                     break;
 
-                  break;
-               case T_CD_REMOTO://pede para trocar o diretório do server
+                  case T_DADOS://caso esteja passando o pacote de dados
+                     FILE *arq = fopen(filename, "a+");
+                     fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
+                     fclose(arq);
+                     
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, 1);
 
-                  strncpy(filename, (char *)rcve+4, package.tam);
-                  cdLocal(filename);
+                     break;
 
-                  resposta.ini = 126;
-                  resposta.tipo = T_OK;
-                  resposta.seq = 0;
-                  memcpy(buffer_resposta, &resposta, 3);
+                  case T_FIM_ARQUIVO:
+                     printf("\tArquivo %s recebido com sucesso\n", filename);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, 1);
+                     break;
 
-                  send(socket, buffer_resposta, sizeof(buffer_resposta) , 0);
-                  break;
+                  case T_CD_REMOTO://pede para trocar o diretório do server
 
-               default:
-                  break;
+                     strncpy(filename, (char *)rcve+4, package.tam);
+                     cdLocal(filename);
+
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, 1);
+
+                     break;
+
+                  default:
+                     break;
                }
 
                seq.client = (seq.client + 1) % 64;
