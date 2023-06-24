@@ -21,7 +21,8 @@ int main(int argc, char **argv){
    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
    pacote_t package;
-   char filename[63];
+   char filename[63], expr[63];
+   int qtd_files = 0;
 
    if(servidor){
       while(1){
@@ -47,6 +48,12 @@ int main(int argc, char **argv){
 
                      break;
 
+                  case T_BACKUP_VARIOS: //caso peça backup de um arquivo
+                     qtd_files = rcve[4];
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0);
+                     
+                     break;
+
                   case T_DADOS://caso esteja passando o pacote de dados
                      FILE *arq = fopen(filename, "a+");
                      fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
@@ -58,6 +65,11 @@ int main(int argc, char **argv){
 
                   case T_FIM_ARQUIVO:
                      printf("\tArquivo %s recebido com sucesso\n", filename);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                     break;
+
+                  case T_FIM_GRUPO:
+                     printf("\t%d arquivos recebidos com sucesso!\n", qtd_files);
                      envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
                      break;
 
@@ -86,11 +98,23 @@ int main(int argc, char **argv){
 
                      break;
 
+                  case T_RECUPERA_VARIOS:
+                     strncpy(expr, (char *)rcve+4, package.tam);
+
+                     enviaVariosArquivos(socket, expr, &seq);
+
+                     envia(socket, NULL, 0, T_FIM_GRUPO, &seq, 0, 0);
+
+                     break;
+
                   default:
                      break;
                }
 
                seq.client = (seq.client + 1) % 64;
+            }
+            else if(package.ini == 126 && package.seq != seq.client){
+               envia(socket, NULL, 0, T_NACK, NULL, 0, 0);
             }
          }
 
@@ -126,7 +150,7 @@ int main(int argc, char **argv){
                break;
 
             case BACKUP_VARIOS:
-               backupVariosArquivos(socket, token, &seq);
+               enviaVariosArquivos(socket, token, &seq);
                break;
 
             case RESTAURA_UM:
@@ -134,7 +158,7 @@ int main(int argc, char **argv){
                break;
 
             case RESTAURA_VARIOS:
-               backupVariosArquivos(socket, token, &seq);
+               restauraVariosArquivos(socket, token, &seq);
                break;
 
             case LS:

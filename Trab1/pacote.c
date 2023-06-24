@@ -151,31 +151,19 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
  * @param dados Vetor com dados do pacote
  * @param tamanho Tamanho dos dados
  */
-void escreveParte(char *arquivo, unsigned char *dados, int tamanho){
+int escreveParte(char *arquivo, unsigned char *dados, int tamanho){
    FILE* arq;
 
-   // Remove arquivo caso já exista => Como faz parte do arquivo, acaba deletando ele sempre
-   //if(access(arquivo, F_OK) == 0){
-   //    remove(arquivo);
-   //}
-
    // Cria novo arquivo em modo append, para acumular os dados dos pacotes
-   arq = fopen(arquivo, "a");
+   arq = fopen(arquivo, "a+");
    if(arq == NULL){
       printf("Erro ao abrir arquivo: ");
-      switch(errno){
-         case ENOSPC:
-            // Manda pacote com erro
-            break;
-         
-         case EACCES:
-            // Manda pacote com erro
-            break;
-      }
+      return errno;
    }
 
    // Escreve dados no arquivo
    fwrite(dados, sizeof(unsigned char), tamanho, arq);
 
    fclose(arq);
+   return 0;
 }

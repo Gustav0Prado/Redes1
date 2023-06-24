@@ -14,5 +14,5 @@ typedef struct seq_t
 }seq_t;
 
 int enviaArquivo(int socket, char *arquivo, seq_t *seq);
-void escreveParte(char *arquivo, unsigned char *dados, int tamanho);
+int escreveParte(char *arquivo, unsigned char *dados, int tamanho);
 int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int wait, int answer_t);

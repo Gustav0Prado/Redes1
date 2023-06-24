@@ -91,7 +91,7 @@ void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
  * @param arquivo    Nome do arquivo
  * @param seq        Sequencia
  */
-void backupVariosArquivos(int socket, char *expr, seq_t *seq){
+void enviaVariosArquivos(int socket, char *expr, seq_t *seq){
    /*
       Acessa diretorio
       Para cada arquivo
@@ -100,15 +100,35 @@ void backupVariosArquivos(int socket, char *expr, seq_t *seq){
                Se sim, backup1Arquivo
          Passa pro proximo
    */
-   //FILE *arq;
 
    int i=0;
    glob_t globbuf;
+   unsigned char qtd[1];
 
    if (glob(expr, 0, NULL, &globbuf) == 0) {
+      printf("%ld arquivos a enviar\n", globbuf.gl_pathc);
+
+      //Salva no buffer qtd de arquivos
+      qtd[0] = globbuf.gl_pathc;
+      if(!servidor) envia(socket, qtd, 1, T_BACKUP_VARIOS, seq, 1, T_OK);
+
+      //Envia cada um deles
       for (i=0; i <globbuf.gl_pathc; i++) { 
-         printf("%s\n",globbuf.gl_pathv[i]);
+         if(!servidor){
+            envia(socket, (unsigned char *)globbuf.gl_pathv[i], strlen(globbuf.gl_pathv[i])+1, T_BACKUP_UM, seq, 1, T_OK);
+            if(enviaArquivo(socket, globbuf.gl_pathv[i], seq) == 0){
+               envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK);
+            }
+         }
+         else{
+            envia(socket, (unsigned char *)globbuf.gl_pathv[i], strlen(globbuf.gl_pathv[i])+1, T_NOME_ARQ_REC, seq, 0, 0);
+            if(enviaArquivo(socket, globbuf.gl_pathv[i], seq) == 0){
+               envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 0, 0);
+            }
+         }
       }
+
+      if(!servidor) envia(socket, NULL, 0, T_FIM_GRUPO, seq, 1, T_ACK);
       globfree(&globbuf);
    }
 }
@@ -174,6 +194,83 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
          }
       }
    }
+}
+
+/**
+ * @brief Envia 1 arquivo para o socket
+ * 
+ * @param socket     Socket a usar
+ * @param arquivo    Nome do arquivo
+ * @param seq        Sequencia
+ */
+void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
+   int fim = 0, cont = 0;
+   unsigned char buffRecover[67];
+   char filename[63];
+   char confirm, lixo;
+   pacote_t packRecover;
+
+   envia(socket, (unsigned char *)expr, strlen(expr)+1, T_RECUPERA_VARIOS, seq, 0, 0);
+
+   //Espera ate fim do grupo
+   while(!fim){
+      if(recv(socket, buffRecover, 67, 0) > 0){
+         memcpy(&packRecover, buffRecover, 3);
+         //CHECAR PARIDADE!!!!
+         if(packRecover.ini == 126 && packRecover.seq == (*seq).server){
+            switch(packRecover.tipo){
+               case T_NOME_ARQ_REC:
+                  strncpy(filename, (char*)buffRecover+4, packRecover.tam);
+                  if (access(filename, 0) == 0){
+                     printf("Arquivo já existe, sobrescrever? (s/n)\n");
+                     scanf("%c", &confirm);
+                     scanf("%c", &lixo);
+
+                     if(confirm == 'n'){
+                        return;
+                     }
+                     else{
+                        remove(filename);
+                     }
+                  }
+                  else{
+                     printf("\tRecebendo %s...\n", filename);
+                  }
+                  break;
+               
+               case T_DADOS:
+                  FILE *arq = fopen(filename, "a+");
+                  fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
+                  fclose(arq);
+                  
+                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                  break;
+
+               case T_FIM_ARQUIVO:
+                  printf("\t\tArquivo %s restaurado com sucesso\n", filename);
+                  cont++;
+                  break;
+
+               case T_FIM_GRUPO:
+                  fim = 1;
+                  printf("\t%d arquivos restaurados com sucesso!\n", cont);
+                  break;
+               
+               case ERRO_ARQ_NEXISTE:
+                  printf("ERRO: Arquivo não existe\n");
+                  break;
+               
+               default:
+                  break;
+            }
+            (*seq).server = ((*seq).server+ 1) % 64;
+         }
+         else if(packRecover.ini == 126 && packRecover.seq != (*seq).server){
+            envia(socket, NULL, 0, T_NACK, seq, 0, 0);
+         }
+      }
+   }
+   
 }
 
 
