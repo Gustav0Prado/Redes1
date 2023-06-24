@@ -12,7 +12,7 @@ int main(int argc, char **argv){
    pacote_t resposta;
    unsigned char buffer_resposta[67];
 
-   int socket = ConexaoRawSocket("eno1");
+   int socket = ConexaoRawSocket("enp3s0");
 
    // Trata entrada
    if(argc == 1){
@@ -50,7 +50,7 @@ int main(int argc, char **argv){
 
    pacote_t package;
    char filename[63];
-   int cont = 0;
+
    if(servidor){
       while(1){
 
@@ -92,11 +92,8 @@ int main(int argc, char **argv){
                case T_CD_REMOTO://pede para trocar o diretório do server
 
                   strncpy(filename, (char *)rcve+4, package.tam);
-                  printf("pediu para mudar diretório para %s\n", filename);
-                  cdLocal(filename);   
-                  char *diretorio_atual = getcwd(NULL,0);
+                  cdLocal(filename);
 
-                  printf("diretório atual: %s \n", diretorio_atual);
                   resposta.ini = 126;
                   resposta.tipo = T_OK;
                   resposta.seq = 0;

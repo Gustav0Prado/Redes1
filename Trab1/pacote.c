@@ -1,11 +1,68 @@
 #include "utils.h"
 
+/**
+ * @brief Limpa linha anterior do terminal
+ * 
+ */
 void clearLines(){
    printf("\033[1A");
    for (int i = 0; i < 100; ++i){
       printf("\b");
    }
 }
+
+/**
+ * @brief Envia uma mensagem pela rede
+ * 
+ * @param socket        Socket por onde enviar
+ * @param dados         Buffer com os dados a serem enviados
+ * @param tam           Tamanho dos dados (não do buffer)
+ * @param tipo          Tipo da mensagem
+ * @param seq           Sequência
+ * @param wait          Se vai esperar resposta ou não
+ * @param answer_t      Se esperar, qual tipo de resposta espera
+ * @param ignore_time   Se ignora o timeout ou reenvia
+ * @return int          Tamanho enviado ou -1 caso não consiga enviar
+ */
+int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int wait, int answer_t, int ignore_time){
+   pacote_t p, resposta;
+   unsigned char buffer[67], buffer_resposta[67];
+   int s;
+
+   p.ini  = 126;
+   p.tam  = tam;
+   p.seq  = (*seq).client;
+   p.tipo = tipo;
+
+   memcpy(buffer, &p, 3);
+   if(dados){
+      memcpy(buffer+4, dados, tam);
+   }
+   //memcpy(buffer+tam+3, &p+3, 1); -> paridade
+   s = send(socket, buffer, 67, 0);
+   
+   if(wait){
+      //Aguarda resposta
+      while(1){
+         if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
+            memcpy(&resposta, buffer_resposta, 3);
+            if(resposta.ini == 126 && resposta.tipo == answer_t){
+               break;
+            }
+         }
+         else if(!ignore_time){
+            //Manda de novo
+            s = send(socket, buffer, 67, 0);
+         }
+      }
+   }
+
+   ((*seq).client) = (((*seq).client) + 1) % 64;
+   return s;
+}
+
+
+
 
 /**
  * @brief Divide e envia o arquivo indicado
@@ -15,36 +72,16 @@ void clearLines(){
 void enviaArquivo(int socket, char *arquivo, seq_t *seq){
    FILE *arq;
    struct stat st;
-   unsigned char buff[67], filename[67], buffer_resposta[67];
+   unsigned char buff[63];
    int tam_read, progress = 0;
-   pacote_t p, resposta;
 
    stat(arquivo, &st);
    long tamanho = st.st_size;
 
-   // Manda nome do arquivo
-   p.ini  = 126;
-   p.seq  = (*seq).client;
-   p.tipo = T_BACKUP_UM;
-   p.tam  = strlen(arquivo)+1;
+   //Envia nome do arquivo
+   if(strlen(arquivo) <= 63){
+      envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK, 0);
 
-   ((*seq).client) = (((*seq).client) + 1) % 64;
-
-   memcpy(filename, &p, 3);
-   strncpy((char *)filename+4, arquivo, 63);
-   send(socket, filename, 67, 0);
-
-   // Aguarda receber OK
-   while(1){
-      if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
-         memcpy(&resposta, buffer_resposta, 3);
-         if(resposta.ini == 126 && resposta.tipo == T_OK){
-            break;
-         }
-      }
-   }
-   if(resposta.tipo == T_OK){
-      p.tipo = T_DADOS;
       // Começa a mandar arquivo
       printf("\t%d%%\n", progress);
 
@@ -54,61 +91,28 @@ void enviaArquivo(int socket, char *arquivo, seq_t *seq){
       }
 
       for(int i = 0; i <= tamanho - tamanho%63; i+=63){
-         // int received = 0;
-         // while(!received){
-            tam_read = fread(buff+4, sizeof(unsigned char), 63, arq);
-            p.tam = tam_read;
-            p.seq = (*seq).client;
-
-            clearLines();
-            printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
-
-            memcpy(buff, &p, 3);            
-            send(socket, buff, 67, 0);
-            
-            //Aguarda ACK
-            while(1){
-               if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
-                  memcpy(&resposta, buffer_resposta, 3);
-                  if(resposta.ini == 126 && resposta.tipo == T_ACK){
-                     break;
-                  }
-               }
-            }
-
-            ((*seq).client) = (((*seq).client) + 1) % 64;
-         // }
-      }
-
-      tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
-      if(tam_read > 0){
-         tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
-         p.tam = tam_read;
-         p.seq = (*seq).client;
-
+         tam_read = fread(buff, sizeof(unsigned char), 63, arq);
 
          clearLines();
          printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
 
-         memcpy(buff, &p, 3);
-         send(socket, buff, 67, 0);
+         envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, 0);
+      }
 
-         while(1){
-               if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
-                  memcpy(&resposta, buffer_resposta, 3);
-                  if(resposta.ini == 126 && resposta.tipo == T_ACK){
-                     break;
-                  }
-               }
-            }
+      tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
+      if(tam_read > 0){
+         tam_read = fread(buff, sizeof(unsigned char), tamanho%63, arq);
 
-         ((*seq).client) = (((*seq).client) + 1) % 64;
+         clearLines();
+         printf("\tEnviando... %.2f%%\n", (progress++/ (float) (tamanho/63)) * 100);
+
+         envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, 0);
       }
 
       fclose(arq);
    }
    else{
-      printf("Respondeu com %d - %d\n", resposta.tipo, resposta.seq);
+      printf("ERRO: NOME DO ARQUIVO MUITO GRANDE\n");
    }
 }
 

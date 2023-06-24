@@ -9,8 +9,8 @@
 int codigoComando(char *token){
    if(strcmp(token, "cdlocal") == 0)         return CDLOCAL;
    if(strcmp(token, "cdremoto") == 0)        return CDREMOTO;
-   if(strcmp(token, "bu") == 0)              return BACKUP_UM;
-   if(strcmp(token, "backup_varios") == 0)   return BACKUP_VARIOS;
+   if( (strcmp(token, "backup_um") == 0) || (strcmp(token, "bu") == 0) )               return BACKUP_UM;
+   if( (strcmp(token, "backup_varios") == 0) || (strcmp(token, "bv") == 0) )           return BACKUP_VARIOS;
    if(strcmp(token, "ls") == 0)              return LS;
    if(strcmp(token, "md5") == 0)             return MD5;
    if(strcmp(token, "quit") == 0)            return QUIT;
@@ -42,31 +42,8 @@ void cdLocal(char *caminho){
  * @param caminho Caminho _ para o diretório desejado
  */
 void cdRemoto(int socket, char *caminho, seq_t *seq){
-   char buff[67], buffer_resposta[67];
-   pacote_t p, resposta;
-
    if(caminho && strlen(caminho) <= 63){
-      p.ini  = 126;
-      p.seq  = (*seq).client;
-      p.tam  = strlen(caminho)+1;
-      p.tipo = T_CD_REMOTO;
-      
-      memcpy(buff, &p, 3);
-      strncpy(buff+4, caminho, strlen(caminho)+1);
-
-      send(socket, buff, sizeof(buff), 0);
-
-      //Aguarda ACK
-      while(1){
-         if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
-            memcpy(&resposta, buffer_resposta, 3);
-            if(resposta.ini == 126 && resposta.tipo == T_OK){
-               break;
-            }
-         }
-      }
-
-      (*seq).client = ((*seq).client + 1) % 64;
+      envia(socket, (unsigned char *)caminho, strlen(caminho)+1, T_CD_REMOTO, seq, 1, T_OK, 0);
    }
    else{
       printf("\tERRO ao ler caminho\n");
