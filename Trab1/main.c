@@ -30,12 +30,12 @@ int main(int argc, char **argv){
             memcpy(&package, rcve, 3);
             //printf("o rcve[0] é %d\n ", rcve[0]);
             if(package.ini == 126 && package.seq == seq.client){
-               
+               //CHECAR PARIDADE!!!!
                //printf( "Recebeu tipo %d \n", package.tipo);
 
                switch (package.tipo){
                   case T_BACKUP_UM: //caso peça backup de um arquivo
-                     strncpy(filename, (char *)rcve+4, package.tam);
+                     strncpy(filename, basename((char *)rcve+4), package.tam);
                      //printf( "Pediu backup de %s\n", filename);
                      if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
                      {
@@ -43,7 +43,7 @@ int main(int argc, char **argv){
                         //printf("tentou remover e voltou %d\n", retorno);
                      }
                      
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, 1);
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0);
 
                      break;
 
@@ -52,13 +52,13 @@ int main(int argc, char **argv){
                      fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
                      fclose(arq);
                      
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, 1);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
 
                      break;
 
                   case T_FIM_ARQUIVO:
                      printf("\tArquivo %s recebido com sucesso\n", filename);
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, 1);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
                      break;
 
                   case T_CD_REMOTO://pede para trocar o diretório do server
@@ -66,7 +66,23 @@ int main(int argc, char **argv){
                      strncpy(filename, (char *)rcve+4, package.tam);
                      cdLocal(filename);
 
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, 1);
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0);
+
+                     break;
+
+                  case T_RECUPERA_UM:
+                     strncpy(filename, (char *)rcve+4, package.tam);
+
+                     if (access(filename, 0) != 0){
+                        if(errno == ENOENT){
+                           envia(socket, NULL, 0, ERRO_ARQ_NEXISTE, NULL, 0, 0);
+                        }
+                     }
+                     else{
+                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                        enviaArquivo(socket, filename, &seq);
+                        envia(socket, NULL, 0, T_FIM_ARQUIVO, &seq, 0, 0);
+                     }
 
                      break;
 
@@ -110,7 +126,15 @@ int main(int argc, char **argv){
                break;
 
             case BACKUP_VARIOS:
-               backupVariosArquivos(token);
+               backupVariosArquivos(socket, token, &seq);
+               break;
+
+            case RESTAURA_UM:
+               restaura1Arquivo(socket, token, &seq);
+               break;
+
+            case RESTAURA_VARIOS:
+               backupVariosArquivos(socket, token, &seq);
                break;
 
             case LS:

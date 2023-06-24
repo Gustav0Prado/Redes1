@@ -14,6 +14,7 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <libgen.h>
 #include "comandos.h"
 #include "pacote.h"
 #include "socket.h"

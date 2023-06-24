@@ -9,8 +9,10 @@
 int codigoComando(char *token){
    if(strcmp(token, "cdlocal") == 0)         return CDLOCAL;
    if(strcmp(token, "cdremoto") == 0)        return CDREMOTO;
-   if( (strcmp(token, "backup_um") == 0) || (strcmp(token, "bu") == 0) )               return BACKUP_UM;
-   if( (strcmp(token, "backup_varios") == 0) || (strcmp(token, "bv") == 0) )           return BACKUP_VARIOS;
+   if( (strcmp(token, "backup_um") == 0)        || (strcmp(token, "bu") == 0) )        return BACKUP_UM;
+   if( (strcmp(token, "backup_varios") == 0)    || (strcmp(token, "bv") == 0) )        return BACKUP_VARIOS;
+   if( (strcmp(token, "restaura_um") == 0)      || (strcmp(token, "ru") == 0) )        return RESTAURA_UM;
+   if( (strcmp(token, "restaura_varios") == 0)  || (strcmp(token, "rv") == 0) )        return RESTAURA_VARIOS;
    if(strcmp(token, "ls") == 0)              return LS;
    if(strcmp(token, "md5") == 0)             return MD5;
    if(strcmp(token, "quit") == 0)            return QUIT;
@@ -43,7 +45,7 @@ void cdLocal(char *caminho){
  */
 void cdRemoto(int socket, char *caminho, seq_t *seq){
    if(caminho && strlen(caminho) <= 63){
-      envia(socket, (unsigned char *)caminho, strlen(caminho)+1, T_CD_REMOTO, seq, 1, T_OK, 0);
+      envia(socket, (unsigned char *)caminho, strlen(caminho)+1, T_CD_REMOTO, seq, 1, T_OK);
    }
    else{
       printf("\tERRO ao ler caminho\n");
@@ -59,9 +61,10 @@ void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
    // Checa se arquivo existe
    if(access(arquivo, R_OK) == 0){
       if(strlen(arquivo) <= 63){
-         envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK, 0);
-         enviaArquivo(socket, arquivo, seq);
-         envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK, 0);
+         envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK);
+         if(enviaArquivo(socket, arquivo, seq) == 0){
+            envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK);
+         }
       }
       else{
          printf("ERRO AO LER NOME DO ARUIVO: NOME MUITO GRANDE\n");
@@ -82,11 +85,13 @@ void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
 }
 
 /**
- * @brief Realiza backup de varios arquivos dada uma expressão regular
+ * @brief Envia 1 arquivo para o socket
  * 
- * @param regex Expressão Regular dos arquivos desejados
+ * @param socket     Socket a usar
+ * @param arquivo    Nome do arquivo
+ * @param seq        Sequencia
  */
-void backupVariosArquivos(char *expr){
+void backupVariosArquivos(int socket, char *expr, seq_t *seq){
    /*
       Acessa diretorio
       Para cada arquivo
@@ -108,11 +113,75 @@ void backupVariosArquivos(char *expr){
    }
 }
 
+
+/**
+ * @brief Restaura 1 arquivo recebido do socket
+ * 
+ * @param socket     Socket a usar
+ * @param arquivo    Nome do arquivo
+ * @param seq        Sequencia
+ */
+void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
+   unsigned char buffRecover[67];
+   char confirm, lixo;
+   pacote_t packRecover;
+
+   if (access(arquivo, 0) == 0){
+      printf("Arquivo já existe, sobrescrever? (s/n)\n");
+      scanf("%c", &confirm);
+      scanf("%c", &lixo);
+
+      if(confirm == 'n'){
+         return;
+      }
+      else{
+         remove(arquivo);
+      }
+   }
+
+   envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 1, T_ACK);
+   int fim = 0;
+   while(!fim){
+      if(recv(socket, buffRecover, 67, 0) > 0){
+         memcpy(&packRecover, buffRecover, 3);
+         //CHECAR PARIDADE!!!!
+         if(packRecover.ini == 126 && packRecover.seq == (*seq).server){
+            switch(packRecover.tipo){
+               case T_DADOS:
+                  FILE *arq = fopen(arquivo, "a+");
+                  fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
+                  fclose(arq);
+                  
+                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                  (*seq).server = ((*seq).server+ 1) % 64;
+                  break;
+
+               case T_FIM_ARQUIVO:
+                  printf("\tArquivo %s restaurado com sucesso\n", arquivo);
+                  fim = 1;
+                  return;
+               
+               case ERRO_ARQ_NEXISTE:
+                  printf("ERRO: Arquivo não existe\n");
+                  break;
+               
+               default:
+                  break;
+            }
+         }
+         else{
+            envia(socket, NULL, 0, T_NACK, seq, 0, 0);
+         }
+      }
+   }
+}
+
+
 /**
  * @brief Cria MD5 para um arquivo e o retorna no vetor c
  * 
  * @param arquivo Nome do arquivo
- * @param c Vetor de unsigned char com md5 gerado
+ * @param md5 Vetor de unsigned char com md5 gerado
  * 
  * @return int Tamanho da string md5
  */
