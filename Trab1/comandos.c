@@ -159,7 +159,8 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
       }
    }
 
-   envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 1, T_ACK, NULL);
+   envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 0, T_ACK, NULL);
+
    int fim = 0;
    while(!fim){
       if(recv(socket, buffRecover, 67, 0) > 0){
@@ -171,7 +172,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   FILE *arq = fopen(arquivo, "a+");
                   fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
-                  
+                  printf("A sequência do seq.serve é : %d \n", seq->server);
                   envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                   (*seq).server = ((*seq).server+ 1) % 64;
                   break;
@@ -179,6 +180,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                case T_FIM_ARQUIVO:
                   printf("\tArquivo %s restaurado com sucesso\n", arquivo);
                   fim = 1;
+                  (*seq).server = ((*seq).server+ 1) % 64;
                   return;
                
                case T_ERRO:

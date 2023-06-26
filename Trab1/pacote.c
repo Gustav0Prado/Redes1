@@ -163,20 +163,19 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
       return -1;
    }
 
-   for(int i = 0; i <= tamanho - tamanho%63; i+=63){
+   for(int i = 0; i < tamanho - tamanho%63; i+=63){
       tam_read = fread(buff, sizeof(unsigned char), 63, arq);
-
-      clearLines();
+      printf("tam_read1 é: %d\n", tam_read);
+      // clearLines();
       printf("\tEnviando... %.2f%%\n", (++progress/tam_total) * 100);
 
       envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, NULL);
    }
 
-   tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
+   tam_read = fread(buff, sizeof(unsigned char), tamanho%63, arq);
    if(tam_read > 0){
-      tam_read = fread(buff, sizeof(unsigned char), tamanho%63, arq);
 
-      clearLines();
+      // clearLines();
       printf("\tEnviando... %.2f%%\n", (++progress/tam_total) * 100);
 
       envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, NULL);
