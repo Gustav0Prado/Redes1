@@ -44,13 +44,13 @@ int main(int argc, char **argv){
                         //printf("tentou remover e voltou %d\n", retorno);
                      }
                      
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0);
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
 
                      break;
 
                   case T_BACKUP_VARIOS: //caso peça backup de um arquivo
                      qtd_files = rcve[4];
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0);
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
                      
                      break;
 
@@ -59,18 +59,18 @@ int main(int argc, char **argv){
                      fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
                      fclose(arq);
                      
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
 
                      break;
 
                   case T_FIM_ARQUIVO:
                      printf("\tArquivo %s recebido com sucesso\n", filename);
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                      break;
 
                   case T_FIM_GRUPO:
                      printf("\t%d arquivos recebidos com sucesso!\n", qtd_files);
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                      break;
 
                   case T_CD_REMOTO://pede para trocar o diretório do server
@@ -78,7 +78,7 @@ int main(int argc, char **argv){
                      strncpy(filename, (char *)rcve+4, package.tam);
                      cdLocal(filename);
 
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0);
+                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
 
                      break;
 
@@ -87,13 +87,15 @@ int main(int argc, char **argv){
 
                      if (access(filename, 0) != 0){
                         if(errno == ENOENT){
-                           envia(socket, NULL, 0, ERRO_ARQ_NEXISTE, NULL, 0, 0);
+                           unsigned char ans[63];
+                           sprintf((char *)ans, "%d", ERRO_ARQ_NEXISTE);
+                           envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
                         }
                      }
                      else{
-                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                         enviaArquivo(socket, filename, &seq);
-                        envia(socket, NULL, 0, T_FIM_ARQUIVO, &seq, 0, 0);
+                        envia(socket, NULL, 0, T_FIM_ARQUIVO, &seq, 0, 0, NULL);
                      }
 
                      break;
@@ -103,7 +105,25 @@ int main(int argc, char **argv){
 
                      enviaVariosArquivos(socket, expr, &seq);
 
-                     envia(socket, NULL, 0, T_FIM_GRUPO, &seq, 0, 0);
+                     envia(socket, NULL, 0, T_FIM_GRUPO, &seq, 0, 0, NULL);
+
+                     break;
+
+                  case T_VERIFICA_BACKUP:
+                     char md5[63];
+
+                     strncpy(filename, (char *)rcve+4, package.tam);
+
+                     // Se arquivo existe, manda o MD5
+                     if( geraMD5(filename, (unsigned char *)md5) > 0){
+                        envia(socket, (unsigned char *)md5, strlen(md5)+1, T_MD5, &seq, 0, 0, NULL);
+                     }
+                     else{
+                        // Arquivo não existe, manda erro
+                        char ans[63];
+                        sprintf(ans, "%d", ERRO_ARQ_NEXISTE);
+                        envia(socket, (unsigned char *)ans, strlen(ans)+1, T_ERRO, &seq, 0, 0, NULL);
+                     }
 
                      break;
 
@@ -113,9 +133,9 @@ int main(int argc, char **argv){
 
                seq.client = (seq.client + 1) % 64;
             }
-            else if(package.ini == 126 && package.seq != seq.client){
-               envia(socket, NULL, 0, T_NACK, NULL, 0, 0);
-            }
+            // else if(package.ini == 126 && package.seq != seq.client){
+            //    envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
+            // }
          }
 
       }
@@ -166,14 +186,7 @@ int main(int argc, char **argv){
                break;
             
             case MD5:
-               unsigned char md5[1024];
-               int len = geraMD5(token, md5);
-
-               //Printa MD5 na tela
-               for(int i = 0; i < len; i++){
-                  printf("%02x", md5[i]);
-               }
-               printf("  %s\n", token);
+               checaMD5(socket, token, &seq);
                break;
 
             case QUIT:

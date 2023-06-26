@@ -23,3 +23,4 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq);
 void restauraVariosArquivos(int socket, char *expr, seq_t *seq);
 
 int geraMD5(char *arquivo, unsigned char* c);
+void checaMD5(int socket, char *arquivo, seq_t *seq);

@@ -1,6 +1,36 @@
 #include "utils.h"
 
 /**
+ * @brief Printa erro baseado no codigo
+ * 
+ * @param erro codigo do errno
+ */
+void print_erro(int erro){
+   printf("\t");
+   switch (erro){
+      case ERRO_ARQ_NEXISTE:
+         printf("ERRO: Arquivo não existe\n");
+         break;
+
+      case ERRO_DISCO_CHEIO:
+         printf("ERRO: Disco cheio\n");
+         break;
+
+      case ERRO_PERM_ESCRITA:
+         printf("ERRO: Sem permissão de escrita\n");
+         break;
+
+      case ERRO_PERM_LEITURA:
+         printf("ERRO: Sem permissão de leitura\n");
+         break;
+      
+      default:
+         break;
+   }
+}
+
+
+/**
  * @brief Limpa linha anterior do terminal
  * 
  */
@@ -24,10 +54,10 @@ void clearLines(){
  * @param ignore_time   Se ignora o timeout ou reenvia
  * @return int          Tamanho enviado ou -1 caso não consiga enviar
  */
-int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int wait, int answer_t){
+int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int wait, int answer_t, unsigned char *buffReturn){
    pacote_t p, resposta;
    unsigned char buffer[67] = {0}, buffer_resposta[67] = {0};
-   int s;
+   int ret;
 
    if(tam > 63){
       return -1;
@@ -50,7 +80,7 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
       memcpy(buffer+4, dados, tam);
    }
    //memcpy(buffer+tam+3, &p+3, 1); -> paridade
-   s = send(socket, buffer, sizeof(buffer), 0);
+   ret = send(socket, buffer, sizeof(buffer), 0);
 
    if(wait){
       //Aguarda resposta
@@ -58,23 +88,34 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
          if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
             memcpy(&resposta, buffer_resposta, 3);
             if(resposta.ini == 126 && resposta.tipo == answer_t){
+               if(buffReturn){
+                  memcpy(buffReturn, buffer_resposta+4, resposta.tam);
+               }
                break;
             }
-            //Manda NACK caso mensagem chegue incorreta
-            else if (resposta.tipo != T_NACK){
-               p.tipo = T_NACK;
-               memcpy(buffer, &p, 3);
-               send(socket, buffer, 67, 0);
+            else if(resposta.ini == 126 && resposta.tipo == T_ERRO){
+               char *ptr = (char *)buffer_resposta+4+resposta.tam;
+               int tipo = strtoul((char *)buffer_resposta+4, &ptr, 10);
+      
+               print_erro(tipo);
+               ret = -1;
+               break;
             }
+            // //Manda NACK caso mensagem chegue incorreta
+            // else if (resposta.tipo != T_NACK){
+            //    p.tipo = T_NACK;
+            //    memcpy(buffer, &p, 3);
+            //    send(socket, buffer, 67, 0);
+            // }
             //Caso receba NACK, manda novamente
             else{
-               s = send(socket, buffer, 67, 0);
+               ret = send(socket, buffer, 67, 0);
             }
          }
          else if(!servidor && errno == ETIME){
             //Manda de novo
             printf("Timeout estourou! Mandando novamente!\n");
-            s = send(socket, buffer, 67, 0);
+            ret = send(socket, buffer, 67, 0);
          }
       }
    }
@@ -88,7 +129,8 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
          ((*seq).server) = (((*seq).server) + 1) % 64;
       }
    }
-   return s;
+
+   return ret;
 }
 
 
@@ -127,7 +169,7 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
       clearLines();
       printf("\tEnviando... %.2f%%\n", (++progress/tam_total) * 100);
 
-      envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK);
+      envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, NULL);
    }
 
    tam_read = fread(buff+4, sizeof(unsigned char), tamanho%63, arq);
@@ -137,7 +179,7 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
       clearLines();
       printf("\tEnviando... %.2f%%\n", (++progress/tam_total) * 100);
 
-      envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK);
+      envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, NULL);
    }
 
    fclose(arq);

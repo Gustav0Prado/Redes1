@@ -45,7 +45,7 @@ void cdLocal(char *caminho){
  */
 void cdRemoto(int socket, char *caminho, seq_t *seq){
    if(caminho && strlen(caminho) <= 63){
-      envia(socket, (unsigned char *)caminho, strlen(caminho)+1, T_CD_REMOTO, seq, 1, T_OK);
+      envia(socket, (unsigned char *)caminho, strlen(caminho)+1, T_CD_REMOTO, seq, 1, T_OK, NULL);
    }
    else{
       printf("\tERRO ao ler caminho\n");
@@ -61,9 +61,9 @@ void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
    // Checa se arquivo existe
    if(access(arquivo, R_OK) == 0){
       if(strlen(arquivo) <= 63){
-         envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK);
+         envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK, NULL);
          if(enviaArquivo(socket, arquivo, seq) == 0){
-            envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK);
+            envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK, NULL);
          }
       }
       else{
@@ -110,25 +110,25 @@ void enviaVariosArquivos(int socket, char *expr, seq_t *seq){
 
       //Salva no buffer qtd de arquivos
       qtd[0] = globbuf.gl_pathc;
-      if(!servidor) envia(socket, qtd, 1, T_BACKUP_VARIOS, seq, 1, T_OK);
+      if(!servidor) envia(socket, qtd, 1, T_BACKUP_VARIOS, seq, 1, T_OK, NULL);
 
       //Envia cada um deles
       for (i=0; i <globbuf.gl_pathc; i++) { 
          if(!servidor){
-            envia(socket, (unsigned char *)globbuf.gl_pathv[i], strlen(globbuf.gl_pathv[i])+1, T_BACKUP_UM, seq, 1, T_OK);
+            envia(socket, (unsigned char *)globbuf.gl_pathv[i], strlen(globbuf.gl_pathv[i])+1, T_BACKUP_UM, seq, 1, T_OK, NULL);
             if(enviaArquivo(socket, globbuf.gl_pathv[i], seq) == 0){
-               envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK);
+               envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK, NULL);
             }
          }
          else{
-            envia(socket, (unsigned char *)globbuf.gl_pathv[i], strlen(globbuf.gl_pathv[i])+1, T_NOME_ARQ_REC, seq, 0, 0);
+            envia(socket, (unsigned char *)globbuf.gl_pathv[i], strlen(globbuf.gl_pathv[i])+1, T_NOME_ARQ_REC, seq, 0, 0, NULL);
             if(enviaArquivo(socket, globbuf.gl_pathv[i], seq) == 0){
-               envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 0, 0);
+               envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 0, 0, NULL);
             }
          }
       }
 
-      if(!servidor) envia(socket, NULL, 0, T_FIM_GRUPO, seq, 1, T_ACK);
+      if(!servidor) envia(socket, NULL, 0, T_FIM_GRUPO, seq, 1, T_ACK, NULL);
       globfree(&globbuf);
    }
 }
@@ -159,7 +159,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
       }
    }
 
-   envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 1, T_ACK);
+   envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 1, T_ACK, NULL);
    int fim = 0;
    while(!fim){
       if(recv(socket, buffRecover, 67, 0) > 0){
@@ -172,7 +172,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
                   
-                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                   (*seq).server = ((*seq).server+ 1) % 64;
                   break;
 
@@ -181,8 +181,10 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   fim = 1;
                   return;
                
-               case ERRO_ARQ_NEXISTE:
-                  printf("ERRO: Arquivo não existe\n");
+               case T_ERRO:
+                  char *ptr = (char *)buffRecover+4+packRecover.tam;
+                  int tipo = strtoul((char *)buffRecover+4, &ptr, 10);
+                  print_erro(tipo);
                   break;
                
                default:
@@ -190,7 +192,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
             }
          }
          else{
-            envia(socket, NULL, 0, T_NACK, seq, 0, 0);
+            envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
          }
       }
    }
@@ -210,7 +212,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
    char confirm, lixo;
    pacote_t packRecover;
 
-   envia(socket, (unsigned char *)expr, strlen(expr)+1, T_RECUPERA_VARIOS, seq, 0, 0);
+   envia(socket, (unsigned char *)expr, strlen(expr)+1, T_RECUPERA_VARIOS, seq, 0, 0, NULL);
 
    //Espera ate fim do grupo
    while(!fim){
@@ -243,7 +245,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                   fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
                   
-                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0);
+                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                   break;
 
                case T_FIM_ARQUIVO:
@@ -256,8 +258,10 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                   printf("\t%d arquivos restaurados com sucesso!\n", cont);
                   break;
                
-               case ERRO_ARQ_NEXISTE:
-                  printf("ERRO: Arquivo não existe\n");
+               case T_ERRO:
+                  char *ptr = (char *)buffRecover+4+packRecover.tam;
+                  int tipo = strtoul((char *)buffRecover+4, &ptr, 10);
+                  print_erro(tipo);
                   break;
                
                default:
@@ -266,7 +270,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
             (*seq).server = ((*seq).server+ 1) % 64;
          }
          else if(packRecover.ini == 126 && packRecover.seq != (*seq).server){
-            envia(socket, NULL, 0, T_NACK, seq, 0, 0);
+            envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
          }
       }
    }
@@ -293,7 +297,7 @@ int geraMD5(char *arquivo, unsigned char* md5){
    arq = fopen(arquivo, "r");
    if (arq == NULL) {
       /* Retornar pacote com erro */
-      printf ("Arquivo %s não existe!\n", arquivo);
+      printf ("\tArquivo %s não existe!\n", arquivo);
       return -1;
    }
 
@@ -324,4 +328,43 @@ int geraMD5(char *arquivo, unsigned char* md5){
    fclose (arq);
 
    return md5_digest_len;
+}
+
+/**
+ * @brief Verifica o md5 do arquivo local com o arquivo de backup
+ * 
+ * @param socket  Socket por onde envia mensagens
+ * @param arquivo Nome do arquivo a ser verificado
+ * @param seq     Estrutura de sequencia
+ */
+void checaMD5(int socket, char *arquivo, seq_t *seq){
+   unsigned char md5Local[1024], md5Remoto[1024];
+
+   int e = envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_VERIFICA_BACKUP, seq, 1, T_MD5, md5Remoto);
+
+   if(e > 0){
+      int len = geraMD5(arquivo, md5Local);
+
+      //Printa MD5 na tela
+      printf("MD5 local :\n\t");
+      for(int i = 0; i < len; i++){
+         printf("%02x", md5Local[i]);
+      }
+      printf("  %s\n", arquivo);
+
+      //Printa MD5 na tela
+      printf("MD5 remoto :\n\t");
+      for(int i = 0; i < len; i++){
+         printf("%02x", md5Remoto[i]);
+      }
+      printf("  %s\n", arquivo);
+
+
+      if(strcmp((char *)md5Local, (char*)md5Remoto) == 0){
+         printf("MD5 bate! Arquivos idênticos\n");
+      }
+      else{
+         printf("MD5 não bate! Arquivos diferentes\n");
+      }
+   }
 }
