@@ -166,7 +166,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
       if(recv(socket, buffRecover, 67, 0) > 0){
          memcpy(&packRecover, buffRecover, 3);
          //CHECAR PARIDADE!!!!
-         if(packRecover.ini == 126 && packRecover.seq == (*seq).server){
+         if(packRecover.ini == 126 && packRecover.seq == seq->server){
             switch(packRecover.tipo){
                case T_DADOS:
                   FILE *arq = fopen(arquivo, "a+");
@@ -174,7 +174,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   fclose(arq);
                   printf("A sequência do seq.serve é : %d \n", seq->server);
                   envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-                  (*seq).server = ((*seq).server+ 1) % 64;
+                  seq->server = (seq->server+ 1) % 64;
                   break;
 
                case T_FIM_ARQUIVO:
@@ -221,7 +221,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
       if(recv(socket, buffRecover, 67, 0) > 0){
          memcpy(&packRecover, buffRecover, 3);
          //CHECAR PARIDADE!!!!
-         if(packRecover.ini == 126 && packRecover.seq == (*seq).server){
+         if(packRecover.ini == 126 && packRecover.seq == seq->server){
             switch(packRecover.tipo){
                case T_NOME_ARQ_REC:
                   strncpy(filename, (char*)buffRecover+4, packRecover.tam);
@@ -269,9 +269,9 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                default:
                   break;
             }
-            (*seq).server = ((*seq).server+ 1) % 64;
+            seq->server = (seq->server+ 1) % 64;
          }
-         else if(packRecover.ini == 126 && packRecover.seq != (*seq).server){
+         else if(packRecover.ini == 126 && packRecover.seq != seq->server){
             envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
          }
       }
@@ -344,23 +344,22 @@ void checaMD5(int socket, char *arquivo, seq_t *seq){
 
    int e = envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_VERIFICA_BACKUP, seq, 1, T_MD5, md5Remoto);
 
+   seq->server = (seq->server + 1) % 64;
+
    if(e > 0){
       int len = geraMD5(arquivo, md5Local);
 
       //Printa MD5 na tela
-      printf("MD5 local :\n\t");
+      printf("MD5 local: ");
       for(int i = 0; i < len; i++){
          printf("%02x", md5Local[i]);
       }
-      printf("  %s\n", arquivo);
 
       //Printa MD5 na tela
-      printf("MD5 remoto :\n\t");
+      printf("MD5 remoto: ");
       for(int i = 0; i < len; i++){
          printf("%02x", md5Remoto[i]);
       }
-      printf("  %s\n", arquivo);
-
 
       if(strcmp((char *)md5Local, (char*)md5Remoto) == 0){
          printf("MD5 bate! Arquivos idênticos\n");

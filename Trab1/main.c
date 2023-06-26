@@ -93,10 +93,10 @@ int main(int argc, char **argv){
                         }
                      }
                      else{
-                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                         enviaArquivo(socket, filename, &seq);
                         envia(socket, NULL, 0, T_FIM_ARQUIVO, &seq, 0, 0, NULL);
                      }
+
 
                      break;
 
@@ -197,6 +197,7 @@ int main(int argc, char **argv){
                printf("ERRO: Comando desconhecido\n");
                break;
          }
+         printf("Seq client: %d  --  Seq server: %d\n", seq.client, seq.server);
       }
    }
 }

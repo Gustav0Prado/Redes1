@@ -67,10 +67,10 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
    p.tam  = tam;
    if(seq){
       if(!servidor){
-         p.seq  = (*seq).client;
+         p.seq  = seq->client;
       }
       else{
-         p.seq  = (*seq).server;
+         p.seq  = seq->server;
       }
    }
    p.tipo = tipo;
@@ -123,10 +123,10 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
    // Aumenta as sequencia de forma separada
    if(seq){
       if(!servidor){
-         ((*seq).client) = (((*seq).client) + 1) % 64;
+         seq->client = (seq->client + 1) % 64;
       }
       else{
-         ((*seq).server) = (((*seq).server) + 1) % 64;
+         seq->server = (seq->server + 1) % 64;
       }
    }
 
@@ -174,8 +174,7 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
 
    tam_read = fread(buff, sizeof(unsigned char), tamanho%63, arq);
    if(tam_read > 0){
-
-      // clearLines();
+      clearLines();
       printf("\tEnviando... %.2f%%\n", (++progress/tam_total) * 100);
 
       envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, NULL);
