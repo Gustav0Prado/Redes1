@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv){
    seq_t seq;
-   seq.client = 0; seq.server =0;
+   seq.client = 0; seq.server = 0;
    unsigned char rcve[67];
    char entrada[256];
    char delimitador[3] = " \n";
@@ -197,7 +197,6 @@ int main(int argc, char **argv){
                printf("ERRO: Comando desconhecido\n");
                break;
          }
-         printf("Seq client: %d  --  Seq server: %d\n", seq.client, seq.server);
       }
    }
 }

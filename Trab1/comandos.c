@@ -172,7 +172,6 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   FILE *arq = fopen(arquivo, "a+");
                   fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
-                  printf("A sequência do seq.serve é : %d \n", seq->server);
                   envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                   seq->server = (seq->server+ 1) % 64;
                   break;
@@ -354,12 +353,14 @@ void checaMD5(int socket, char *arquivo, seq_t *seq){
       for(int i = 0; i < len; i++){
          printf("%02x", md5Local[i]);
       }
+      printf("\n");
 
       //Printa MD5 na tela
       printf("MD5 remoto: ");
       for(int i = 0; i < len; i++){
          printf("%02x", md5Remoto[i]);
       }
+      printf("\n");
 
       if(strcmp((char *)md5Local, (char*)md5Remoto) == 0){
          printf("MD5 bate! Arquivos idênticos\n");
