@@ -8,7 +8,7 @@ int main(int argc, char **argv){
    char delimitador[3] = " \n";
    char *token;
 
-   int socket = ConexaoRawSocket("eno1");
+   int socket = ConexaoRawSocket("enp3s0");
 
    // Trata entrada
    escolheEntrada(argc, argv);
@@ -29,113 +29,115 @@ int main(int argc, char **argv){
 
          if(recv(socket, rcve, 67, 0) > 0){
             memcpy(&package, rcve, 3);
-            //printf("o rcve[0] é %d\n ", rcve[0]);
-            if(package.ini == 126 && package.seq == seq.client){
-               //CHECAR PARIDADE!!!!
-               //printf( "Recebeu tipo %d \n", package.tipo);
-
-               switch (package.tipo){
-                  case T_BACKUP_UM: //caso peça backup de um arquivo
-                     strncpy(filename, basename((char *)rcve+4), package.tam);
-                     //printf( "Pediu backup de %s\n", filename);
-                     if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
-                     {
-                        int retorno = remove(filename);
-                        //printf("tentou remover e voltou %d\n", retorno);
-                     }
-                     
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
-
-                     break;
-
-                  case T_BACKUP_VARIOS: //caso peça backup de um arquivo
-                     qtd_files = rcve[4];
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
-                     
-                     break;
-
-                  case T_DADOS://caso esteja passando o pacote de dados
-                     FILE *arq = fopen(filename, "a+");
-                     fwrite(rcve+4, sizeof(unsigned char), package.tam, arq);
-                     fclose(arq);
-                     
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-
-                     break;
-
-                  case T_FIM_ARQUIVO:
-                     printf("\tArquivo %s recebido com sucesso\n", filename);
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-                     break;
-
-                  case T_FIM_GRUPO:
-                     printf("\t%d arquivos recebidos com sucesso!\n", qtd_files);
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-                     break;
-
-                  case T_CD_REMOTO://pede para trocar o diretório do server
-
-                     strncpy(filename, (char *)rcve+4, package.tam);
-                     cdLocal(filename);
-
-                     envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
-
-                     break;
-
-                  case T_RECUPERA_UM:
-                     strncpy(filename, (char *)rcve+4, package.tam);
-
-                     if (access(filename, 0) != 0){
-                        if(errno == ENOENT){
-                           unsigned char ans[63];
-                           sprintf((char *)ans, "%d", ERRO_ARQ_NEXISTE);
-                           envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
-                        }
-                     }
-                     else{
-                        enviaArquivo(socket, filename, &seq);
-                        envia(socket, NULL, 0, T_FIM_ARQUIVO, &seq, 0, 0, NULL);
-                     }
-
-
-                     break;
-
-                  case T_RECUPERA_VARIOS:
-                     strncpy(expr, (char *)rcve+4, package.tam);
-
-                     enviaVariosArquivos(socket, expr, &seq);
-
-                     envia(socket, NULL, 0, T_FIM_GRUPO, &seq, 0, 0, NULL);
-
-                     break;
-
-                  case T_VERIFICA_BACKUP:
-                     char md5[63];
-
-                     strncpy(filename, (char *)rcve+4, package.tam);
-
-                     // Se arquivo existe, manda o MD5
-                     if( geraMD5(filename, (unsigned char *)md5) > 0){
-                        envia(socket, (unsigned char *)md5, strlen(md5)+1, T_MD5, &seq, 0, 0, NULL);
-                     }
-                     else{
-                        // Arquivo não existe, manda erro
-                        char ans[63];
-                        sprintf(ans, "%d", ERRO_ARQ_NEXISTE);
-                        envia(socket, (unsigned char *)ans, strlen(ans)+1, T_ERRO, &seq, 0, 0, NULL);
-                     }
-
-                     break;
-
-                  default:
-                     break;
+            if(package.ini == 126){
+               if(rcve[66] != calcula_paridade(rcve, package.tam)){
+                  envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
                }
+               else if(package.seq != seq.client){
+                  // Mensagem já recebida anteriormente, apenas confirma
+                  if( mensagem_anterior(servidor, &seq, package.seq, package.tipo) ){
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+                  }
+               }
+               else{
+                  switch (package.tipo){
+                     case T_BACKUP_UM: //caso peça backup de um arquivo
+                        strncpy(filename, basename((char *)rcve+3), package.tam);
+                        if (access(filename, 0) == 0) // se o nome do arquivo requisitado já existe, remove
+                        {
+                           remove(filename);
+                        }
+                        
+                        envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
 
-               seq.client = (seq.client + 1) % 64;
+                        break;
+
+                     case T_BACKUP_VARIOS: //caso peça backup de um arquivo
+                        qtd_files = rcve[4];
+                        envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
+                        
+                        break;
+
+                     case T_DADOS://caso esteja passando o pacote de dados
+                        FILE *arq = fopen(filename, "a+");
+                        fwrite(rcve+3, sizeof(unsigned char), package.tam, arq);
+                        fclose(arq);
+                        
+                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+
+                        break;
+
+                     case T_FIM_ARQUIVO:
+                        printf("\tArquivo %s recebido com sucesso\n", filename);
+                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+                        break;
+
+                     case T_FIM_GRUPO:
+                        printf("\t%d arquivos recebidos com sucesso!\n", qtd_files);
+                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+                        break;
+
+                     case T_CD_REMOTO://pede para trocar o diretório do server
+
+                        strncpy(filename, (char *)rcve+3, package.tam);
+                        cdLocal(filename);
+
+                        envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
+
+                        break;
+
+                     case T_RECUPERA_UM:
+                        strncpy(filename, (char *)rcve+3, package.tam);
+
+                        if (access(filename, 0) != 0){
+                           if(errno == ENOENT){
+                              unsigned char ans[63];
+                              sprintf((char *)ans, "%d", ERRO_ARQ_NEXISTE);
+                              envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
+                           }
+                        }
+                        else{
+                           enviaArquivo(socket, filename, &seq);
+                           envia(socket, NULL, 0, T_FIM_ARQUIVO, &seq, 0, 0, NULL);
+                        }
+
+
+                        break;
+
+                     case T_RECUPERA_VARIOS:
+                        strncpy(expr, (char *)rcve+3, package.tam);
+
+                        enviaVariosArquivos(socket, expr, &seq);
+
+                        envia(socket, NULL, 0, T_FIM_GRUPO, &seq, 0, 0, NULL);
+
+                        break;
+
+                     case T_VERIFICA_BACKUP:
+                        char md5[63];
+
+                        strncpy(filename, (char *)rcve+3, package.tam);
+
+                        // Se arquivo existe, manda o MD5
+                        if( geraMD5(filename, (unsigned char *)md5) > 0){
+                           envia(socket, (unsigned char *)md5, strlen(md5)+1, T_MD5, &seq, 0, 0, NULL);
+                        }
+                        else{
+                           // Arquivo não existe, manda erro
+                           char ans[63];
+                           sprintf(ans, "%d", ERRO_ARQ_NEXISTE);
+                           envia(socket, (unsigned char *)ans, strlen(ans)+1, T_ERRO, &seq, 0, 0, NULL);
+                        }
+
+                        break;
+
+                     default:
+                        break;
+                  }
+
+                  seq.client = (seq.client + 1) % 64;
+               }
             }
-            // else if(package.ini == 126 && package.seq != seq.client){
-            //    envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
-            // }
          }
 
       }

@@ -1,6 +1,57 @@
 #include "utils.h"
 
 /**
+ * @brief Checa se uma mensagem é a anterior -> já foi recebida
+ * 
+ * @param servidor      Flag se é o servidor
+ * @param seq           Estrutura de sequência
+ * @param seq_recebida  Sequencia recebida (atual)
+ * @return int          1 caso seja a anterior e 0 caso não
+ */
+int mensagem_anterior(int servidor, seq_t *seq, int seq_recebida, int tipo_recebido){
+   
+   if(tipo_recebido != T_NACK && tipo_recebido != T_ACK && tipo_recebido != T_OK){
+      if (servidor){
+         if(seq_recebida == 63 && seq->client == 0){
+            return 1;
+         }
+         else if(seq_recebida == seq->client-1){
+            return 1;
+         }
+         return 0;
+      }
+      else{
+         if(seq_recebida == 63 && seq->server == 0){
+            return 1;
+         }
+         else if(seq_recebida == seq->server-1){
+            return 1;
+         }
+         return 0;
+      }
+   }
+
+   return 0;
+}
+
+
+/**
+ * @brief Construct a new calcula paridade object
+ * 
+ * @param buffer  buffer da mensagem
+ * @param tam     tamanho da mensagem
+ */
+unsigned char calcula_paridade(unsigned char *buffer, int tam){
+   unsigned char pari = buffer[1] ^ buffer[2];
+   for (int i = 0; i < tam; ++i){
+      pari = pari ^ buffer[i+3];
+   }
+
+   return pari;
+}
+
+
+/**
  * @brief Printa erro baseado no codigo
  * 
  * @param erro codigo do errno
@@ -77,9 +128,12 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
 
    memcpy(buffer, &p, 3);
    if(dados){
-      memcpy(buffer+4, dados, tam);
+      memcpy(buffer+3, dados, tam);
    }
-   //memcpy(buffer+tam+3, &p+3, 1); -> paridade
+
+   // Calcula paridade par
+   buffer[66] = calcula_paridade(buffer, p.tam);
+
    ret = send(socket, buffer, sizeof(buffer), 0);
 
    if(wait){
@@ -87,29 +141,36 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
       while(1){
          if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
             memcpy(&resposta, buffer_resposta, 3);
-            if(resposta.ini == 126 && resposta.tipo == answer_t){
-               if(buffReturn){
-                  memcpy(buffReturn, buffer_resposta+4, resposta.tam);
+            if(resposta.ini == 126){
+               // Caso paridade não bata, manda nack
+               if(buffer_resposta[66] != calcula_paridade(buffer_resposta, resposta.tam)){
+                  envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
                }
-               break;
-            }
-            else if(resposta.ini == 126 && resposta.tipo == T_ERRO){
-               char *ptr = (char *)buffer_resposta+4+resposta.tam;
-               int tipo = strtoul((char *)buffer_resposta+4, &ptr, 10);
-      
-               print_erro(tipo);
-               ret = -1;
-               break;
-            }
-            // //Manda NACK caso mensagem chegue incorreta
-            // else if (resposta.tipo != T_NACK){
-            //    p.tipo = T_NACK;
-            //    memcpy(buffer, &p, 3);
-            //    send(socket, buffer, 67, 0);
-            // }
-            //Caso receba NACK, manda novamente
-            else{
-               ret = send(socket, buffer, 67, 0);
+               // Pegou mensagem já processada (Sequência já passou)
+               else if ( mensagem_anterior(servidor, seq, resposta.seq, resposta.tipo) ){
+                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+               }
+               // Mensagem nova
+               else{
+                  if(resposta.tipo == answer_t){
+                     if(buffReturn){
+                        memcpy(buffReturn, buffer_resposta+3, resposta.tam);
+                     }
+                     break;
+                  }
+                  else if(resposta.tipo == T_ERRO){
+                     char *ptr = (char *)buffer_resposta+3+resposta.tam;
+                     int tipo = strtoul((char *)buffer_resposta+3, &ptr, 10);
+            
+                     print_erro(tipo);
+                     ret = -1;
+                     break;
+                  }
+                  //Caso receba NACK, manda novamente
+                  else if(resposta.tipo == T_NACK){
+                     ret = send(socket, buffer, 67, 0);
+                  }
+               }
             }
          }
          else if(!servidor && errno == ETIME){

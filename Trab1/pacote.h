@@ -17,3 +17,5 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq);
 int escreveParte(char *arquivo, unsigned char *dados, int tamanho);
 int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int wait, int answer_t, unsigned char *buffReturn);
 void print_erro(int erro);
+unsigned char calcula_paridade(unsigned char *buffer, int tam);
+int mensagem_anterior(int servidor, seq_t *seq, int seq_recebida, int tipo_recebido);

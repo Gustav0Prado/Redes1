@@ -147,7 +147,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
    pacote_t packRecover;
 
    if (access(arquivo, 0) == 0){
-      printf("Arquivo já existe, sobrescrever? (s/n)\n");
+      printf("Arquivo já existe, sobrescrever? (s/n) ");
       scanf("%c", &confirm);
       scanf("%c", &lixo);
 
@@ -170,7 +170,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
             switch(packRecover.tipo){
                case T_DADOS:
                   FILE *arq = fopen(arquivo, "a+");
-                  fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
+                  fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
                   envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                   seq->server = (seq->server+ 1) % 64;
@@ -183,8 +183,8 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   return;
                
                case T_ERRO:
-                  char *ptr = (char *)buffRecover+4+packRecover.tam;
-                  int tipo = strtoul((char *)buffRecover+4, &ptr, 10);
+                  char *ptr = (char *)buffRecover+3+packRecover.tam;
+                  int tipo = strtoul((char *)buffRecover+3, &ptr, 10);
                   print_erro(tipo);
                   break;
                
@@ -192,9 +192,9 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   break;
             }
          }
-         else{
-            envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
-         }
+         // else{
+         //    envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
+         // }
       }
    }
 }
@@ -223,9 +223,9 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
          if(packRecover.ini == 126 && packRecover.seq == seq->server){
             switch(packRecover.tipo){
                case T_NOME_ARQ_REC:
-                  strncpy(filename, (char*)buffRecover+4, packRecover.tam);
+                  strncpy(filename, (char*)buffRecover+3, packRecover.tam);
                   if (access(filename, 0) == 0){
-                     printf("Arquivo já existe, sobrescrever? (s/n)\n");
+                     printf("Arquivo já existe, sobrescrever? (s/n) ");
                      scanf("%c", &confirm);
                      scanf("%c", &lixo);
 
@@ -243,7 +243,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                
                case T_DADOS:
                   FILE *arq = fopen(filename, "a+");
-                  fwrite(buffRecover+4, sizeof(unsigned char), packRecover.tam, arq);
+                  fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
                   
                   envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
@@ -260,8 +260,8 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                   break;
                
                case T_ERRO:
-                  char *ptr = (char *)buffRecover+4+packRecover.tam;
-                  int tipo = strtoul((char *)buffRecover+4, &ptr, 10);
+                  char *ptr = (char *)buffRecover+3+packRecover.tam;
+                  int tipo = strtoul((char *)buffRecover+3, &ptr, 10);
                   print_erro(tipo);
                   break;
                
@@ -270,9 +270,9 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
             }
             seq->server = (seq->server+ 1) % 64;
          }
-         else if(packRecover.ini == 126 && packRecover.seq != seq->server){
-            envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
-         }
+         // else if(packRecover.ini == 126 && packRecover.seq != seq->server){
+         //    envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
+         // }
       }
    }
    
@@ -349,7 +349,7 @@ void checaMD5(int socket, char *arquivo, seq_t *seq){
       int len = geraMD5(arquivo, md5Local);
 
       //Printa MD5 na tela
-      printf("MD5 local: ");
+      printf("MD5 local:  ");
       for(int i = 0; i < len; i++){
          printf("%02x", md5Local[i]);
       }
