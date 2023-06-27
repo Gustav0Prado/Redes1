@@ -16,9 +16,11 @@ int main(int argc, char **argv){
    memset(rcve, 0, 67);
 
    // Timeout de 1 segundo = 10000 milissegundos
-   int timeoutMillis = 1000;
-   struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
-   setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
+   if(!servidor){
+      int timeoutMillis = 5000;
+      struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
+      setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
+   }
 
    pacote_t package;
    char filename[63], expr[63];
@@ -41,6 +43,7 @@ int main(int argc, char **argv){
 
             memcpy(&package, rcve, 3);
             if(package.ini == 126){
+               printf("\t\tRecebeu seq: %d\n", package.seq);
                if(rcve[66] != calcula_paridade(rcve, package.tam)){
                   envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
                }
@@ -144,7 +147,9 @@ int main(int argc, char **argv){
                         break;
                   }
 
+                  // printf("Ultimo recebido %d", seq.client);
                   seq.client = (seq.client + 1) % 64;
+                  // printf(" -- espera %d\n", seq.client);
                }
             }
          }
