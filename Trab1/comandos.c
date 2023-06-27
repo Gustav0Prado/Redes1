@@ -161,6 +161,11 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
 
    envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 0, T_ACK, NULL);
 
+
+   FILE *arq;
+   char *ptr;
+   int tipo;
+
    int fim = 0;
    while(!fim){
       if(recv(socket, buffRecover, 67, 0) > 0){
@@ -169,7 +174,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
          if(packRecover.ini == 126 && packRecover.seq == seq->server){
             switch(packRecover.tipo){
                case T_DADOS:
-                  FILE *arq = fopen(arquivo, "a+");
+                  arq = fopen(arquivo, "a+");
                   fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
                   envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
@@ -183,8 +188,8 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   return;
                
                case T_ERRO:
-                  char *ptr = (char *)buffRecover+3+packRecover.tam;
-                  int tipo = strtoul((char *)buffRecover+3, &ptr, 10);
+                  ptr = (char *)buffRecover+3+packRecover.tam;
+                  tipo = strtoul((char *)buffRecover+3, &ptr, 10);
                   print_erro(tipo);
                   break;
                
@@ -215,6 +220,9 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
 
    envia(socket, (unsigned char *)expr, strlen(expr)+1, T_RECUPERA_VARIOS, seq, 0, 0, NULL);
 
+   FILE *arq;
+   char *ptr;
+   int tipo;
    //Espera ate fim do grupo
    while(!fim){
       if(recv(socket, buffRecover, 67, 0) > 0){
@@ -242,7 +250,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                   break;
                
                case T_DADOS:
-                  FILE *arq = fopen(filename, "a+");
+                  arq = fopen(filename, "a+");
                   fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
                   fclose(arq);
                   
@@ -260,8 +268,8 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                   break;
                
                case T_ERRO:
-                  char *ptr = (char *)buffRecover+3+packRecover.tam;
-                  int tipo = strtoul((char *)buffRecover+3, &ptr, 10);
+                  ptr = (char *)buffRecover+3+packRecover.tam;
+                  tipo = strtoul((char *)buffRecover+3, &ptr, 10);
                   print_erro(tipo);
                   break;
                

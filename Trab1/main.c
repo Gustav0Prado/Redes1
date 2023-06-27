@@ -8,7 +8,7 @@ int main(int argc, char **argv){
    char delimitador[3] = " \n";
    char *token;
 
-   int socket = ConexaoRawSocket("enp3s0");
+   int socket = ConexaoRawSocket("eno1");
 
    // Trata entrada
    escolheEntrada(argc, argv);
@@ -23,6 +23,8 @@ int main(int argc, char **argv){
    pacote_t package;
    char filename[63], expr[63];
    int qtd_files = 0;
+   FILE *arq;
+   char md5[63];
 
    if(servidor){
       while(1){
@@ -59,7 +61,7 @@ int main(int argc, char **argv){
                         break;
 
                      case T_DADOS://caso esteja passando o pacote de dados
-                        FILE *arq = fopen(filename, "a+");
+                        arq = fopen(filename, "a+");
                         fwrite(rcve+3, sizeof(unsigned char), package.tam, arq);
                         fclose(arq);
                         
@@ -114,8 +116,6 @@ int main(int argc, char **argv){
                         break;
 
                      case T_VERIFICA_BACKUP:
-                        char md5[63];
-
                         strncpy(filename, (char *)rcve+3, package.tam);
 
                         // Se arquivo existe, manda o MD5
