@@ -20,3 +20,4 @@ void print_erro(int erro);
 unsigned char calcula_paridade(unsigned char *buffer, int tam);
 int mensagem_anterior(int servidor, seq_t *seq, int seq_recebida, int tipo_recebido);
 int recebe(int socket, unsigned char *buffer, int tam_buffer);
+void escreveErro_e_envia_pkgerro(char *filename, int erro, int socket, seq_t *seq);

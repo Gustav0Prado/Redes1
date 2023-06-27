@@ -313,9 +313,54 @@ int escreveParte(char *arquivo, unsigned char *dados, int tamanho){
       return errno;
    }
 
+
    // Escreve dados no arquivo
-   fwrite(dados, sizeof(unsigned char), tamanho, arq);
+   int w = fwrite(dados, sizeof(unsigned char), tamanho, arq);
+   if(w <= 0){
+      return errno;
+   }
 
    fclose(arq);
    return 0;
 }
+
+/**
+ * @brief Escreve erro na tela e manda mensagem baseada nele
+ * 
+ * @param erro       Codigo do errno
+ * @param socket     Socket da rede
+ * @param seq        Sequencia
+ */
+void escreveErro_e_envia_pkgerro(char *filename, int erro, int socket, seq_t *seq)
+{
+   unsigned char ans[63];
+   switch (erro){
+      case ENOENT:
+         printf("Arquivo não existe\n");
+         sprintf((char *)ans, "%d", ERRO_ARQ_NEXISTE);
+         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
+         break;
+      
+      case EACCES:
+         printf("Permissão negada\n");
+
+         if((access(filename, R_OK) == 0) && (access(filename, W_OK) != 0)){
+            sprintf((char *)ans, "%d", ERRO_PERM_ESCRITA);
+         }
+         else{
+            sprintf((char *)ans, "%d", ERRO_PERM_LEITURA);
+         }
+         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
+         break;
+
+      case ENOSPC:
+         printf("Sem espaço no disco\n");
+         sprintf((char *)ans, "%d", ERRO_DISCO_CHEIO);
+         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
+         break;
+      
+      default:
+         break;
+      }
+}
+           

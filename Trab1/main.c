@@ -15,18 +15,17 @@ int main(int argc, char **argv){
 
    memset(rcve, 0, 67);
 
-   // Timeout de 1 segundo = 10000 milissegundos
-   if(!servidor){
-      int timeoutMillis = 5000;
-      struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
-      setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
-   }
+   // Timeout de 5 segundo = 10000 milissegundos
+   int timeoutMillis = 5000;
+   struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
+   setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
+   FILE *arq;
    pacote_t package;
    char filename[63], expr[63];
-   int qtd_files = 0;
-   FILE *arq;
    char md5[63];
+   int qtd_files = 0;
+   int esc;
 
    if(servidor){
       while(1){
@@ -73,9 +72,10 @@ int main(int argc, char **argv){
                         break;
 
                      case T_DADOS://caso esteja passando o pacote de dados
-                        arq = fopen(filename, "a+");
-                        fwrite(rcve+3, sizeof(unsigned char), package.tam, arq);
-                        fclose(arq);
+                        esc = escreveParte(filename, rcve+3, package.tam);
+                        if (esc > 0){
+                           escreveErro_e_envia_pkgerro(filename, esc, socket, &seq);
+                        }
                         
                         envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
 

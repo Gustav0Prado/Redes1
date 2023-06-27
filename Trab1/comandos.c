@@ -91,15 +91,6 @@ void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
  * @param seq        Sequencia
  */
 void enviaVariosArquivos(int socket, char *expr, seq_t *seq){
-   /*
-      Acessa diretorio
-      Para cada arquivo
-         Checa se primeira parte satisfaz regex
-         Se sim, checa se extensao satisfaz regex
-               Se sim, backup1Arquivo
-         Passa pro proximo
-   */
-
    int i=0;
    glob_t globbuf;
    unsigned char qtd[1];
@@ -178,7 +169,6 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
          }
 
          memcpy(&packRecover, buffRecover, 3);
-         //CHECAR PARIDADE!!!!
          if(packRecover.ini == 126){
             // Caso paridade não bata, manda nack
             if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
@@ -191,17 +181,17 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
             else if(packRecover.seq == seq->server){
                switch(packRecover.tipo){
                   case T_DADOS:
-                     arq = fopen(arquivo, "a+");
-                     fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
-                     fclose(arq);
+                     esc = escreveParte(arquivo, buffRecover+3, packRecover.tam);
+                     if (esc > 0){
+                        print_erro(errno);
+                     }
+
                      envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-                     seq->server = (seq->server+ 1) % 64;
                      break;
 
                   case T_FIM_ARQUIVO:
                      printf("\tArquivo %s restaurado com sucesso\n", arquivo);
                      fim = 1;
-                     (*seq).server = ((*seq).server+ 1) % 64;
                      return;
                   
                   case T_ERRO:
@@ -213,6 +203,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
                   default:
                      break;
                }
+               seq->server = (seq->server+ 1) % 64;
             }
          }
       }
@@ -238,6 +229,8 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
    FILE *arq;
    char *ptr;
    int tipo;
+   int esc;
+
    //Espera ate fim do grupo
    while(!fim){
       if(recebe(socket, buffRecoverD, sizeof(buffRecoverD)) > 0){
@@ -251,8 +244,15 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
          }
 
          memcpy(&packRecover, buffRecover, 3);
-         //CHECAR PARIDADE!!!!
-         if(packRecover.ini == 126 && packRecover.seq == seq->server){
+         // Caso paridade não bata, manda nack
+         if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
+            envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
+         }
+         // Pegou mensagem já processada (Sequência já passou)
+         else if ( mensagem_anterior(servidor, seq, packRecover.seq, packRecover.tipo) ){
+            envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+         }
+         else if(packRecover.seq == seq->server){
             switch(packRecover.tipo){
                case T_NOME_ARQ_REC:
                   strncpy(filename, (char*)buffRecover+3, packRecover.tam);
@@ -274,9 +274,10 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                   break;
                
                case T_DADOS:
-                  arq = fopen(filename, "a+");
-                  fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
-                  fclose(arq);
+                  esc = escreveParte(filename, buffRecover+3, packRecover.tam);
+                  if (esc > 0){
+                     print_erro(errno);
+                  }
                   
                   envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                   break;
