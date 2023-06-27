@@ -3,7 +3,7 @@
 int main(int argc, char **argv){
    seq_t seq;
    seq.client = 0; seq.server = 0;
-   unsigned char rcve[67];
+   unsigned char rcveD[134], rcve[67];
    char entrada[256];
    char delimitador[3] = " \n";
    char *token;
@@ -29,7 +29,16 @@ int main(int argc, char **argv){
    if(servidor){
       while(1){
 
-         if(recv(socket, rcve, 67, 0) > 0){
+         if(recv(socket, rcveD, sizeof(rcveD), 0) > 0){
+            int i = 0;
+            int j = 0;
+            while(i < 134){
+               rcve[i] = rcveD[j];
+
+               i++;
+               j+=2;
+            }
+
             memcpy(&package, rcve, 3);
             if(package.ini == 126){
                if(rcve[66] != calcula_paridade(rcve, package.tam)){
