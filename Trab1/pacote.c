@@ -191,6 +191,7 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
             
             memcpy(&resposta, buffer_resposta, 3);
             if(resposta.ini == 126){
+               printf("Recebeu resposta %d\n", resposta.tipo);
                // Caso paridade não bata, manda nack
                if(buffer_resposta[66] != calcula_paridade(buffer_resposta, resposta.tam)){
                   envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
