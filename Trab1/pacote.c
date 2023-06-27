@@ -150,7 +150,16 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
    if(wait){
       //Aguarda resposta
       while(1){
-         if (recv(socket, buffer_resposta, sizeof(buffer_resposta), 0) > 0){
+         if (recv(socket, buffer_respostaD, sizeof(buffer_respostaD), 0) > 0){
+            int i = 0;
+            int j = 0;
+            while(i < 134){
+               buffer_resposta[i] = buffer_respostaD[j];
+
+               i++;
+               j+=2;
+            }
+            
             memcpy(&resposta, buffer_resposta, 3);
             if(resposta.ini == 126){
                // Caso paridade não bata, manda nack

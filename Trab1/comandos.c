@@ -142,7 +142,7 @@ void enviaVariosArquivos(int socket, char *expr, seq_t *seq){
  * @param seq        Sequencia
  */
 void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
-   unsigned char buffRecover[67];
+   unsigned char buffRecover[67], buffRecoverD[134];
    char confirm, lixo;
    pacote_t packRecover;
 
@@ -168,7 +168,16 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
 
    int fim = 0;
    while(!fim){
-      if(recv(socket, buffRecover, 67, 0) > 0){
+     if(recv(socket, buffRecoverD, sizeof(buffRecoverD), 0) > 0){
+         int i = 0;
+         int j = 0;
+         while(i < 134){
+            buffRecover[i] = buffRecoverD[j];
+
+            i++;
+            j+=2;
+         }
+
          memcpy(&packRecover, buffRecover, 3);
          //CHECAR PARIDADE!!!!
          if(packRecover.ini == 126 && packRecover.seq == seq->server){
@@ -213,7 +222,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
  */
 void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
    int fim = 0, cont = 0;
-   unsigned char buffRecover[67];
+   unsigned char buffRecover[67], buffRecoverD[134];
    char filename[63];
    char confirm, lixo;
    pacote_t packRecover;
@@ -225,7 +234,16 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
    int tipo;
    //Espera ate fim do grupo
    while(!fim){
-      if(recv(socket, buffRecover, 67, 0) > 0){
+      if(recv(socket, buffRecoverD, sizeof(buffRecoverD), 0) > 0){
+         int i = 0;
+         int j = 0;
+         while(i < 134){
+            buffRecover[i] = buffRecoverD[j];
+
+            i++;
+            j+=2;
+         }
+
          memcpy(&packRecover, buffRecover, 3);
          //CHECAR PARIDADE!!!!
          if(packRecover.ini == 126 && packRecover.seq == seq->server){
