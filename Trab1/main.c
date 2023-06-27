@@ -15,7 +15,7 @@ int main(int argc, char **argv){
 
    memset(rcve, 0, 67);
 
-   // Timeout de 10 segundos = 10000 milissegundos
+   // Timeout de 1 segundo = 10000 milissegundos
    int timeoutMillis = 1000;
    struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));

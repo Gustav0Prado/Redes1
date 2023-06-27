@@ -108,6 +108,7 @@ void clearLines(){
 int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int wait, int answer_t, unsigned char *buffReturn){
    pacote_t p, resposta;
    unsigned char buffer[67] = {0}, buffer_resposta[67] = {0};
+   unsigned char bufferD[134] = {0}, buffer_respostaD[134] = {0};
    int ret;
 
    if(tam > 63){
@@ -134,7 +135,17 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
    // Calcula paridade par
    buffer[66] = calcula_paridade(buffer, p.tam);
 
-   ret = send(socket, buffer, sizeof(buffer), 0);
+   int i = 0;
+   int j = 0;
+   while(i < 134){
+      bufferD[i] = buffer[j];
+      bufferD[i+1] = 0xFF;
+
+      i+=2;
+      j++;
+   }
+
+   ret = send(socket, bufferD, sizeof(bufferD), 0);
 
    if(wait){
       //Aguarda resposta
@@ -173,10 +184,10 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
                }
             }
          }
-         else if(!servidor && errno == ETIME){
+         else if(!servidor){
             //Manda de novo
             printf("Timeout estourou! Mandando novamente!\n");
-            ret = send(socket, buffer, 67, 0);
+            ret = send(socket, bufferD, 134, 0);
          }
       }
    }
