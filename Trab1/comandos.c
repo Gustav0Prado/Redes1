@@ -216,11 +216,6 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
             }
          }
       }
-      else if(!servidor){
-         //Manda de novo
-         printf("Timeout estourou! Mandando um NACK!\n");
-         envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
-      }
    }
 }
 
