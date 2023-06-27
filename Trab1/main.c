@@ -171,47 +171,51 @@ int main(int argc, char **argv){
             codigo = -1;
 
          token = strtok(NULL, "\n");
+         if((token) && strlen(token) > 63){
+            printf("Erro ao ler token! Token muito grande ( > 63 caracteres)\n");
+         }
+         else{
+            switch (codigo){
+               case CDLOCAL:
+                  cdLocal(token);
+                  break;
 
-         switch (codigo){
-            case CDLOCAL:
-               cdLocal(token);
-               break;
+               case CDREMOTO:
+                  cdRemoto(socket, token, &seq);
+                  break;
+               
+               case BACKUP_UM:
+                  backup1Arquivo(socket, token, &seq);
+                  break;
 
-            case CDREMOTO:
-               cdRemoto(socket, token, &seq);
-               break;
-            
-            case BACKUP_UM:
-               backup1Arquivo(socket, token, &seq);
-               break;
+               case BACKUP_VARIOS:
+                  enviaVariosArquivos(socket, token, &seq);
+                  break;
 
-            case BACKUP_VARIOS:
-               enviaVariosArquivos(socket, token, &seq);
-               break;
+               case RESTAURA_UM:
+                  restaura1Arquivo(socket, token, &seq);
+                  break;
 
-            case RESTAURA_UM:
-               restaura1Arquivo(socket, token, &seq);
-               break;
+               case RESTAURA_VARIOS:
+                  restauraVariosArquivos(socket, token, &seq);
+                  break;
 
-            case RESTAURA_VARIOS:
-               restauraVariosArquivos(socket, token, &seq);
-               break;
+               case LS:
+                  system("ls -l");
+                  break;
+               
+               case MD5:
+                  checaMD5(socket, token, &seq);
+                  break;
 
-            case LS:
-               system("ls -l");
-               break;
-            
-            case MD5:
-               checaMD5(socket, token, &seq);
-               break;
+               case QUIT:
+                  exit(0);
+                  break;
 
-            case QUIT:
-               exit(0);
-               break;
-
-            default:
-               printf("ERRO: Comando desconhecido\n");
-               break;
+               default:
+                  printf("ERRO: Comando desconhecido\n");
+                  break;
+            }
          }
       }
    }

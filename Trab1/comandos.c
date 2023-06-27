@@ -60,12 +60,11 @@ void cdRemoto(int socket, char *caminho, seq_t *seq){
 void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
    // Checa se arquivo existe
    if(access(arquivo, R_OK) == 0){
-      if(strlen(arquivo) <= 63){
-         envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK, NULL);
-         if(enviaArquivo(socket, arquivo, seq) == 0){
-            envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK, NULL);
-         }
+      envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_BACKUP_UM, seq, 1, T_OK, NULL);
+      if(enviaArquivo(socket, arquivo, seq) == 0){
+         envia(socket, NULL, 0, T_FIM_ARQUIVO, seq, 1, T_ACK, NULL);
       }
+      
       else{
          printf("ERRO AO LER NOME DO ARUIVO: NOME MUITO GRANDE\n");
       }
@@ -168,7 +167,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
 
    int fim = 0;
    while(!fim){
-     if(recv(socket, buffRecoverD, sizeof(buffRecoverD), 0) > 0){
+     if(recebe(socket, buffRecoverD, sizeof(buffRecoverD)) > 0){
          int i = 0;
          int j = 0;
          while(i < 134){
@@ -180,35 +179,47 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
 
          memcpy(&packRecover, buffRecover, 3);
          //CHECAR PARIDADE!!!!
-         if(packRecover.ini == 126 && packRecover.seq == seq->server){
-            switch(packRecover.tipo){
-               case T_DADOS:
-                  arq = fopen(arquivo, "a+");
-                  fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
-                  fclose(arq);
-                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-                  seq->server = (seq->server+ 1) % 64;
-                  break;
+         if(packRecover.ini == 126){
+            // Caso paridade não bata, manda nack
+            if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
+               envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
+            }
+            // Pegou mensagem já processada (Sequência já passou)
+            else if ( mensagem_anterior(servidor, seq, packRecover.seq, packRecover.tipo) ){
+               envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+            }
+            else if(packRecover.seq == seq->server){
+               switch(packRecover.tipo){
+                  case T_DADOS:
+                     arq = fopen(arquivo, "a+");
+                     fwrite(buffRecover+3, sizeof(unsigned char), packRecover.tam, arq);
+                     fclose(arq);
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+                     seq->server = (seq->server+ 1) % 64;
+                     break;
 
-               case T_FIM_ARQUIVO:
-                  printf("\tArquivo %s restaurado com sucesso\n", arquivo);
-                  fim = 1;
-                  (*seq).server = ((*seq).server+ 1) % 64;
-                  return;
-               
-               case T_ERRO:
-                  ptr = (char *)buffRecover+3+packRecover.tam;
-                  tipo = strtoul((char *)buffRecover+3, &ptr, 10);
-                  print_erro(tipo);
-                  break;
-               
-               default:
-                  break;
+                  case T_FIM_ARQUIVO:
+                     printf("\tArquivo %s restaurado com sucesso\n", arquivo);
+                     fim = 1;
+                     (*seq).server = ((*seq).server+ 1) % 64;
+                     return;
+                  
+                  case T_ERRO:
+                     ptr = (char *)buffRecover+3+packRecover.tam;
+                     tipo = strtoul((char *)buffRecover+3, &ptr, 10);
+                     print_erro(tipo);
+                     break;
+                  
+                  default:
+                     break;
+               }
             }
          }
-         // else{
-         //    envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
-         // }
+      }
+      else if(!servidor){
+         //Manda de novo
+         printf("Timeout estourou! Mandando um NACK!\n");
+         envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
       }
    }
 }
@@ -234,7 +245,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
    int tipo;
    //Espera ate fim do grupo
    while(!fim){
-      if(recv(socket, buffRecoverD, sizeof(buffRecoverD), 0) > 0){
+      if(recebe(socket, buffRecoverD, sizeof(buffRecoverD)) > 0){
          int i = 0;
          int j = 0;
          while(i < 134){
@@ -296,9 +307,6 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
             }
             seq->server = (seq->server+ 1) % 64;
          }
-         // else if(packRecover.ini == 126 && packRecover.seq != seq->server){
-         //    envia(socket, NULL, 0, T_NACK, seq, 0, 0, NULL);
-         // }
       }
    }
    

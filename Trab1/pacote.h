@@ -19,3 +19,4 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
 void print_erro(int erro);
 unsigned char calcula_paridade(unsigned char *buffer, int tam);
 int mensagem_anterior(int servidor, seq_t *seq, int seq_recebida, int tipo_recebido);
+int recebe(int socket, unsigned char *buffer, int tam_buffer);

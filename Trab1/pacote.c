@@ -1,4 +1,11 @@
 #include "utils.h"
+#include <sys/time.h>
+
+long long timestamp(){
+   struct timeval tp;
+   gettimeofday(&tp, NULL);
+   return tp.tv_sec * 1000 + tp.tv_usec / 1000;
+}
 
 /**
  * @brief Checa se uma mensagem é a anterior -> já foi recebida
@@ -93,6 +100,28 @@ void clearLines(){
 }
 
 /**
+ * @brief Recebe do socket
+ * 
+ * @param socket        Socket a receber
+ * @param buffer        Buffer de mensagem
+ * @param tam_buffer    Tamanho do buffer
+ * @return int          0 em sucesso ou -1 em caso de erro 
+ */
+int recebe(int socket, unsigned char *buffer, int tam_buffer){
+   long long comeco = timestamp();
+   int bytes_lidos;
+
+   do{
+      bytes_lidos = recv(socket, buffer, tam_buffer, 0);
+      if(bytes_lidos > 0 && buffer[0] == 126){
+         return bytes_lidos;
+      }
+   } while(timestamp() - comeco <= 5000);
+   return -1;
+}
+
+
+/**
  * @brief Envia uma mensagem pela rede
  * 
  * @param socket        Socket por onde enviar
@@ -150,7 +179,7 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
    if(wait){
       //Aguarda resposta
       while(1){
-         if (recv(socket, buffer_respostaD, sizeof(buffer_respostaD), 0) > 0){
+         if (recebe(socket, buffer_respostaD, sizeof(buffer_respostaD)) > 0){
             int i = 0;
             int j = 0;
             while(i < 134){
@@ -188,15 +217,16 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
                   }
                   //Caso receba NACK, manda novamente
                   else if(resposta.tipo == T_NACK){
-                     ret = send(socket, buffer, 67, 0);
+                     ret = send(socket, bufferD, 134, 0);
                   }
                }
             }
          }
          else if(!servidor){
             //Manda de novo
-            printf("Timeout estourou! Mandando novamente!\n");
+            printf("Timeout estourou! Mandando novamente o %d!\n", seq->client);
             ret = send(socket, bufferD, 134, 0);
+            printf("Mandou %d\n", seq->client);
          }
       }
    }
