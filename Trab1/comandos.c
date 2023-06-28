@@ -241,61 +241,63 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
 
          memcpy(&packRecover, buffRecover, 3);
          // Caso paridade não bata, manda nack
-         if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
-            envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
-         }
-         // Pegou mensagem já processada (Sequência já passou)
-         else if ( mensagem_anterior(servidor, seq, packRecover.seq, packRecover.tipo) ){
-            envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-         }
-         else if(packRecover.seq == seq->server){
-            switch(packRecover.tipo){
-               case T_NOME_ARQ_REC:
-                  strncpy(filename, (char*)buffRecover+3, packRecover.tam);
-                  if (access(filename, 0) == 0){
-                     printf("Arquivo já existe, sobrescrever? (s/n) ");
-                     scanf("%c", &confirm);
-                     scanf("%c", &lixo);
+         if(packRecover.ini == 126){
+            if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
+               envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
+            }
+            // Pegou mensagem já processada (Sequência já passou)
+            else if ( mensagem_anterior(servidor, seq, packRecover.seq, packRecover.tipo) ){
+               envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+            }
+            else if(packRecover.seq == seq->server){
+               switch(packRecover.tipo){
+                  case T_NOME_ARQ_REC:
+                     strncpy(filename, (char*)buffRecover+3, packRecover.tam);
+                     if (access(filename, 0) == 0){
+                        printf("Arquivo já existe, sobrescrever? (s/n) ");
+                        scanf("%c", &confirm);
+                        scanf("%c", &lixo);
 
-                     if(confirm == 'n'){
-                        return;
+                        if(confirm == 'n'){
+                           return;
+                        }
+                        else{
+                           remove(filename);
+                        }
                      }
                      else{
-                        remove(filename);
+                        printf("\tRecebendo %s...\n", filename);
                      }
-                  }
-                  else{
-                     printf("\tRecebendo %s...\n", filename);
-                  }
-                  break;
-               
-               case T_DADOS:
-                  esc = escreveParte(filename, buffRecover+3, packRecover.tam);
-                  if (esc > 0){
-                     print_erro(errno);
-                  }
+                     break;
                   
-                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-                  break;
+                  case T_DADOS:
+                     esc = escreveParte(filename, buffRecover+3, packRecover.tam);
+                     if (esc > 0){
+                        print_erro(errno);
+                     }
+                     
+                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+                     break;
 
-               case T_FIM_ARQUIVO:
-                  printf("\t\tArquivo %s restaurado com sucesso\n", filename);
-                  cont++;
-                  break;
+                  case T_FIM_ARQUIVO:
+                     printf("\t\tArquivo %s restaurado com sucesso\n", filename);
+                     cont++;
+                     break;
 
-               case T_FIM_GRUPO:
-                  fim = 1;
-                  printf("\t%d arquivos restaurados com sucesso!\n", cont);
-                  break;
-               
-               case T_ERRO:
-                  ptr = (char *)buffRecover+3+packRecover.tam;
-                  tipo = strtoul((char *)buffRecover+3, &ptr, 10);
-                  print_erro(tipo);
-                  break;
-               
-               default:
-                  break;
+                  case T_FIM_GRUPO:
+                     fim = 1;
+                     printf("\t%d arquivos restaurados com sucesso!\n", cont);
+                     break;
+                  
+                  case T_ERRO:
+                     ptr = (char *)buffRecover+3+packRecover.tam;
+                     tipo = strtoul((char *)buffRecover+3, &ptr, 10);
+                     print_erro(tipo);
+                     break;
+                  
+                  default:
+                     break;
+               }
             }
             seq->server = (seq->server+ 1) % 64;
          }
