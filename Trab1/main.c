@@ -84,6 +84,7 @@ int main(int argc, char **argv){
                         envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
                         break;
 
+
                      case T_FIM_GRUPO:
                         printf("\t%d arquivos recebidos com sucesso!\n", qtd_files);
                         envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
