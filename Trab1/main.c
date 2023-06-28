@@ -8,7 +8,7 @@ int main(int argc, char **argv){
    char delimitador[3] = " \n";
    char *token;
 
-   int socket = ConexaoRawSocket("eno1");
+   int socket = ConexaoRawSocket("enp3s0");
 
    // Trata entrada
    escolheEntrada(argc, argv);
@@ -41,7 +41,6 @@ int main(int argc, char **argv){
 
             memcpy(&package, rcve, 3);
             if(package.ini == 126){
-               printf("\t\tRecebeu seq: %d\n", package.seq);
                if(rcve[66] != calcula_paridade(rcve, package.tam)){
                   envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
                }
@@ -146,9 +145,7 @@ int main(int argc, char **argv){
                         break;
                   }
 
-                  // printf("Ultimo recebido %d", seq.client);
                   seq.client = (seq.client + 1) % 64;
-                  // printf(" -- espera %d\n", seq.client);
                }
             }
          }
@@ -205,6 +202,19 @@ int main(int argc, char **argv){
                
                case MD5:
                   checaMD5(socket, token, &seq);
+                  break;
+
+               case VER_COMANDOS:
+                  printf("Comandos disponíveis:\n");
+                  printf("\tbackup_um ou bu  <arquivo>:              Fazer o backup de um arquivo para o servidor\n");
+                  printf("\tbackup_varios ou bv  <expressao>:        Fazer o backup de um grupo de arquivos para o servidor\n");
+                  printf("\trestaura_um ou ru  <arquivo>:            Restaura o backup de um arquivo do servidor\n");
+                  printf("\trestaura_varios ou rv  <expressao>:      Restaura o backup de um grupo de arquivos do servidor\n");
+                  printf("\tmd5 <arquivo>:                           Compara o md5 da versão local do arquivo com a versão no servidor\n");
+                  printf("\tcdlocal <diretorio>:                     Mudar o diretório local\n");
+                  printf("\tcdremoto <diretorio>:                    Mudar o diretório remoto de backup\n");
+                  printf("\tls:                                      Listar arquivos locais\n");
+                  printf("\tquit:                                    Sair do programa\n");
                   break;
 
                case QUIT:

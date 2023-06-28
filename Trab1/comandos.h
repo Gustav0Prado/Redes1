@@ -8,6 +8,7 @@
 #define CDREMOTO            5
 #define RESTAURA_UM         6
 #define RESTAURA_VARIOS     7
+#define VER_COMANDOS        8
 #define QUIT               99
 
 

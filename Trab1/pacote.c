@@ -1,6 +1,11 @@
 #include "utils.h"
 #include <sys/time.h>
 
+/**
+ * @brief Timestamp
+ * 
+ * @return long long  Timestamp gerado
+ */
 long long timestamp(){
    struct timeval tp;
    gettimeofday(&tp, NULL);
@@ -85,6 +90,7 @@ void print_erro(int erro){
       default:
          break;
    }
+   return;
 }
 
 
@@ -225,9 +231,8 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
          //else if(!servidor){
          else{
             //Manda de novo
-            printf("Timeout estourou! Mandando novamente o %d!\n", seq->client);
+            printf("Timeout estourou! Tentando mandar novamente!\n");
             ret = send(socket, bufferD, 134, 0);
-            printf("Mandou %d\n", seq->client);
          }
       }
    }

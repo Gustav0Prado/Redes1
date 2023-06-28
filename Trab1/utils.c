@@ -33,6 +33,7 @@ void escolheEntrada(int argc, char **argv){
    else{
       system("clear");
       printf("Iniciado como cliente\n");
+      printf("Digite ver_comandos ou vc para os possíveis comandos\n");
    }
 }
 

@@ -13,6 +13,7 @@ int codigoComando(char *token){
    if( (strcmp(token, "backup_varios") == 0)    || (strcmp(token, "bv") == 0) )        return BACKUP_VARIOS;
    if( (strcmp(token, "restaura_um") == 0)      || (strcmp(token, "ru") == 0) )        return RESTAURA_UM;
    if( (strcmp(token, "restaura_varios") == 0)  || (strcmp(token, "rv") == 0) )        return RESTAURA_VARIOS;
+   if( (strcmp(token, "ver_comandos") == 0)     || (strcmp(token, "vc") == 0) )        return VER_COMANDOS;
    if(strcmp(token, "ls") == 0)              return LS;
    if(strcmp(token, "md5") == 0)             return MD5;
    if(strcmp(token, "quit") == 0)            return QUIT;
@@ -66,7 +67,7 @@ void backup1Arquivo(int socket, char *arquivo, seq_t *seq){
       }
       
       else{
-         printf("ERRO AO LER NOME DO ARUIVO: NOME MUITO GRANDE\n");
+         printf("ERRO AO LER NOME DO ARQUIVO: NOME MUITO GRANDE\n");
       }
    }
    else{
@@ -149,59 +150,62 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
       }
    }
 
-   envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 0, T_ACK, NULL);
+   int e = envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 0, 0, NULL);
 
-   char *ptr;
-   int tipo, esc;
+   if(e > 0){
+      char *ptr;
+      int tipo, esc;
 
-   int fim = 0;
-   while(!fim){
-     if(recebe(socket, buffRecoverD, sizeof(buffRecoverD)) > 0){
-         int i = 0;
-         int j = 0;
-         while(i < 134){
-            buffRecover[i] = buffRecoverD[j];
+      int fim = 0;
+      while(!fim){
+         if(recv(socket, buffRecoverD, sizeof(buffRecoverD), 0) > 0){
+            int i = 0;
+            int j = 0;
+            while(i < 134){
+               buffRecover[i] = buffRecoverD[j];
 
-            i++;
-            j+=2;
-         }
-
-         memcpy(&packRecover, buffRecover, 3);
-         if(packRecover.ini == 126){
-            // Caso paridade não bata, manda nack
-            if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
-               envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
+               i++;
+               j+=2;
             }
-            // Pegou mensagem já processada (Sequência já passou)
-            else if ( mensagem_anterior(servidor, seq, packRecover.seq, packRecover.tipo) ){
-               envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-            }
-            else if(packRecover.seq == seq->server){
-               switch(packRecover.tipo){
-                  case T_DADOS:
-                     esc = escreveParte(arquivo, buffRecover+3, packRecover.tam);
-                     if (esc > 0){
-                        print_erro(errno);
-                     }
 
-                     envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
-                     break;
-
-                  case T_FIM_ARQUIVO:
-                     printf("\tArquivo %s restaurado com sucesso\n", arquivo);
-                     fim = 1;
-                     return;
-                  
-                  case T_ERRO:
-                     ptr = (char *)buffRecover+3+packRecover.tam;
-                     tipo = strtoul((char *)buffRecover+3, &ptr, 10);
-                     print_erro(tipo);
-                     break;
-                  
-                  default:
-                     break;
+            memcpy(&packRecover, buffRecover, 3);
+            if(packRecover.ini == 126){
+               // Caso paridade não bata, manda nack
+               if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
+                  envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
                }
-               seq->server = (seq->server+ 1) % 64;
+               // Pegou mensagem já processada (Sequência já passou)
+               else if ( mensagem_anterior(servidor, seq, packRecover.seq, packRecover.tipo) ){
+                  envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+               }
+               else if(packRecover.seq == seq->server){
+                  switch(packRecover.tipo){
+                     case T_DADOS:
+                        esc = escreveParte(arquivo, buffRecover+3, packRecover.tam);
+                        if (esc > 0){
+                           print_erro(errno);
+                        }
+
+                        envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
+                        break;
+
+                     case T_FIM_ARQUIVO:
+                        printf("\tArquivo %s restaurado com sucesso\n", arquivo);
+                        fim = 1;
+                        break;
+                     
+                     case T_ERRO:
+                        ptr = (char *)buffRecover+3+packRecover.tam;
+                        tipo = strtoul((char *)buffRecover+3, &ptr, 10);
+                        print_erro(tipo);
+                        fim = 1;
+                        break;
+                     
+                     default:
+                        break;
+                  }
+                  seq->server = (seq->server+ 1) % 64;
+               }
             }
          }
       }
@@ -229,7 +233,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
 
    //Espera ate fim do grupo
    while(!fim){
-      if(recebe(socket, buffRecoverD, sizeof(buffRecoverD)) > 0){
+      if(recv(socket, buffRecoverD, sizeof(buffRecoverD), 0) > 0){
          int i = 0;
          int j = 0;
          while(i < 134){
@@ -265,9 +269,7 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                            remove(filename);
                         }
                      }
-                     else{
-                        printf("\tRecebendo %s...\n", filename);
-                     }
+                     printf("\tRecebendo %s...\n", filename);
                      break;
                   
                   case T_DADOS:
@@ -390,7 +392,8 @@ void checaMD5(int socket, char *arquivo, seq_t *seq){
       }
       printf("\n");
 
-      if(strcmp((char *)md5Local, (char*)md5Remoto) == 0){
+      int s = strncmp((char *)md5Local, (char*)md5Remoto, 16);
+      if(s == 0){
          printf("MD5 bate! Arquivos idênticos\n");
       }
       else{
