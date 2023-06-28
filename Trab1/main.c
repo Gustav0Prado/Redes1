@@ -64,7 +64,7 @@ int main(int argc, char **argv){
                         break;
 
                      case T_BACKUP_VARIOS: //caso peça backup de um arquivo
-                        qtd_files = rcve[4];
+                        qtd_files = rcve[3];
                         envia(socket, NULL, 0, T_OK, NULL, 0, 0, NULL);
                         
                         break;

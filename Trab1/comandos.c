@@ -143,6 +143,7 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
       scanf("%c", &lixo);
 
       if(confirm == 'n'){
+         printf("Operação cancelada\n");
          return;
       }
       else{
@@ -226,6 +227,15 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
    char confirm, lixo;
    pacote_t packRecover;
 
+   printf("Sobrescrever todos os arquivos? (s/n) ");
+   scanf("%c", &confirm);
+   scanf("%c", &lixo);
+
+   if(confirm == 'n'){
+      printf("Operação cancelada\n");
+      return;
+   }
+
    envia(socket, (unsigned char *)expr, strlen(expr)+1, T_RECUPERA_VARIOS, seq, 0, 0, NULL);
 
    char *ptr;
@@ -257,18 +267,6 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
                switch(packRecover.tipo){
                   case T_NOME_ARQ_REC:
                      strncpy(filename, (char*)buffRecover+3, packRecover.tam);
-                     if (access(filename, 0) == 0){
-                        printf("Arquivo já existe, sobrescrever? (s/n) ");
-                        scanf("%c", &confirm);
-                        scanf("%c", &lixo);
-
-                        if(confirm == 'n'){
-                           return;
-                        }
-                        else{
-                           remove(filename);
-                        }
-                     }
                      printf("\tRecebendo %s...\n", filename);
                      break;
                   
