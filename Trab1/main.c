@@ -8,7 +8,7 @@ int main(int argc, char **argv){
    char delimitador[3] = " \n";
    char *token;
 
-   int socket = ConexaoRawSocket("enp3s0");
+   int socket = ConexaoRawSocket("eno1");
 
    // Trata entrada
    escolheEntrada(argc, argv);
