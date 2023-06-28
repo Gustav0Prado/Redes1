@@ -205,6 +205,10 @@ int main(int argc, char **argv){
                   checaMD5(socket, token, &seq);
                   break;
 
+               case MD5_VARIOS:
+                  checaMD5Varios(socket, token, &seq);
+                  break;
+
                case VER_COMANDOS:
                   printf("Comandos disponíveis:\n");
                   printf("\tbackup_um ou bu  <arquivo>:              Fazer o backup de um arquivo para o servidor\n");

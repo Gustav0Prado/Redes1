@@ -14,8 +14,9 @@ int codigoComando(char *token){
    if( (strcmp(token, "restaura_um") == 0)      || (strcmp(token, "ru") == 0) )        return RESTAURA_UM;
    if( (strcmp(token, "restaura_varios") == 0)  || (strcmp(token, "rv") == 0) )        return RESTAURA_VARIOS;
    if( (strcmp(token, "ver_comandos") == 0)     || (strcmp(token, "vc") == 0) )        return VER_COMANDOS;
-   if(strcmp(token, "ls") == 0)              return LS;
+   if( (strcmp(token, "md5_varios") == 0)       || (strcmp(token, "md5v") == 0) )      return MD5_VARIOS;
    if(strcmp(token, "md5") == 0)             return MD5;
+   if(strcmp(token, "ls") == 0)              return LS;
    if(strcmp(token, "quit") == 0)            return QUIT;
    else return -1;
 }
@@ -252,14 +253,14 @@ void checaMD5(int socket, char *arquivo, seq_t *seq){
       int len = geraMD5(arquivo, md5Local);
 
       //Printa MD5 na tela
-      printf("MD5 local:  ");
+      printf("\tMD5 local:  ");
       for(int i = 0; i < len; i++){
          printf("%02x", md5Local[i]);
       }
       printf("\n");
 
       //Printa MD5 na tela
-      printf("MD5 remoto: ");
+      printf("\tMD5 remoto: ");
       for(int i = 0; i < len; i++){
          printf("%02x", md5Remoto[i]);
       }
@@ -267,10 +268,34 @@ void checaMD5(int socket, char *arquivo, seq_t *seq){
 
       int s = strncmp((char *)md5Local, (char*)md5Remoto, 16);
       if(s == 0){
-         printf("MD5 bate! Arquivos idênticos\n");
+         printf("\tMD5 bate! Arquivos idênticos\n");
       }
       else{
-         printf("MD5 não bate! Arquivos diferentes\n");
+         printf("\tMD5 não bate! Arquivos diferentes\n");
       }
+   }
+}
+
+/**
+ * @brief Checa MD5 de vários arquivos
+ * 
+ * @param socket     Socket de rede
+ * @param expr       Expressão dos nomes dos arquivos
+ * @param seq        Estrutura de sequência
+ */
+void checaMD5Varios(int socket, char *expr, seq_t *seq){
+   int i=0;
+   glob_t globbuf;
+
+   if (glob(expr, 0, NULL, &globbuf) == 0) {
+      printf("%ld arquivos a checar\n", globbuf.gl_pathc);
+
+      for (i=0; i <globbuf.gl_pathc; i++) { 
+         printf("%s:\n", globbuf.gl_pathv[i]);
+         checaMD5(socket, globbuf.gl_pathv[i], seq);
+         printf("\n");
+      }
+
+      globfree(&globbuf);
    }
 }

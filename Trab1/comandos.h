@@ -9,6 +9,7 @@
 #define RESTAURA_UM         6
 #define RESTAURA_VARIOS     7
 #define VER_COMANDOS        8
+#define MD5_VARIOS          9
 #define QUIT               99
 
 
@@ -25,3 +26,4 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq);
 
 int geraMD5(char *arquivo, unsigned char* c);
 void checaMD5(int socket, char *arquivo, seq_t *seq);
+void checaMD5Varios(int socket, char *expr, seq_t *seq);

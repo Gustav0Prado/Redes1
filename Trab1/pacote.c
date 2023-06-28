@@ -295,6 +295,11 @@ void recuperaArquivo(int socket, seq_t *seq, char* arquivo, int varios){
                switch(packRecover.tipo){
                   case T_NOME_ARQ_REC:
                      strncpy(filename, (char*)buffRecover+3, packRecover.tam);
+                     
+                     if(access(filename, 0) == 0){
+                        remove(filename);
+                     }
+                     
                      printf("\tRecebendo %s...\n", filename);
                      break;
                   
