@@ -338,7 +338,7 @@ void escreveErro_e_envia_pkgerro(char *filename, int erro, int socket, seq_t *se
       case ENOENT:
          printf("Arquivo não existe\n");
          sprintf((char *)ans, "%d", ERRO_ARQ_NEXISTE);
-         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
+         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, seq, 0, 0, NULL);
          break;
       
       case EACCES:
@@ -350,13 +350,13 @@ void escreveErro_e_envia_pkgerro(char *filename, int erro, int socket, seq_t *se
          else{
             sprintf((char *)ans, "%d", ERRO_PERM_LEITURA);
          }
-         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
+         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, seq, 0, 0, NULL);
          break;
 
       case ENOSPC:
          printf("Sem espaço no disco\n");
          sprintf((char *)ans, "%d", ERRO_DISCO_CHEIO);
-         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, &seq, 0, 0, NULL);
+         envia(socket, ans, strlen((char *)ans)+1, T_ERRO, seq, 0, 0, NULL);
          break;
       
       default:

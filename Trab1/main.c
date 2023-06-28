@@ -20,7 +20,6 @@ int main(int argc, char **argv){
    struct timeval timeout = { .tv_sec = timeoutMillis / 1000, .tv_usec = (timeoutMillis % 1000) * 1000 };
    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout));
 
-   FILE *arq;
    pacote_t package;
    char filename[63], expr[63];
    char md5[63];

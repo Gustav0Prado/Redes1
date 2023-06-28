@@ -151,10 +151,8 @@ void restaura1Arquivo(int socket, char *arquivo, seq_t *seq){
 
    envia(socket, (unsigned char *)arquivo, strlen(arquivo)+1, T_RECUPERA_UM, seq, 0, T_ACK, NULL);
 
-
-   FILE *arq;
    char *ptr;
-   int tipo;
+   int tipo, esc;
 
    int fim = 0;
    while(!fim){
@@ -226,10 +224,8 @@ void restauraVariosArquivos(int socket, char *expr, seq_t *seq){
 
    envia(socket, (unsigned char *)expr, strlen(expr)+1, T_RECUPERA_VARIOS, seq, 0, 0, NULL);
 
-   FILE *arq;
    char *ptr;
-   int tipo;
-   int esc;
+   int tipo, esc;
 
    //Espera ate fim do grupo
    while(!fim){
