@@ -97,6 +97,9 @@ void enviaVariosArquivos(int socket, char *expr, seq_t *seq){
    glob_t globbuf;
    unsigned char qtd[1];
 
+   // OBS: referências a globbuf são pra expandir uma expressão regular em vários nomes de arquivos.
+   // Por exemplo: *.c se refere a todos os arquivos que terminam em .c e a.* são todos os arquivos de nome a, qualquer seja a extensão
+
    if (glob(expr, 0, NULL, &globbuf) == 0) {
       printf("%ld arquivos a enviar\n", globbuf.gl_pathc);
 

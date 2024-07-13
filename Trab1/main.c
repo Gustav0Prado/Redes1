@@ -30,6 +30,7 @@ int main(int argc, char **argv){
       while(1){
 
          if(recv(socket, rcveD, sizeof(rcveD), 0) > 0){
+            // Retira 0xff do pacote, já que são inúteis agora
             int i = 0;
             int j = 0;
             while(i < 134){
@@ -39,8 +40,12 @@ int main(int argc, char **argv){
                j+=2;
             }
 
+            // Copia do array de char pra uma struct
             memcpy(&package, rcve, 3);
+
+            // 126 == marcador de inicio em decimal
             if(package.ini == 126){
+               // Checa paridade
                if(rcve[66] != calcula_paridade(rcve, package.tam)){
                   envia(socket, NULL, 0, T_NACK, NULL, 0, 0, NULL);
                }

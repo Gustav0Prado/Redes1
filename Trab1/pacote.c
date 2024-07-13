@@ -48,7 +48,7 @@ int mensagem_anterior(int servidor, seq_t *seq, int seq_recebida, int tipo_receb
 
 
 /**
- * @brief Construct a new calcula paridade object
+ * @brief Calcula paridade de um pacote
  * 
  * @param buffer  buffer da mensagem
  * @param tam     tamanho da mensagem
@@ -106,7 +106,7 @@ void clearLines(){
 }
 
 /**
- * @brief Recebe do socket
+ * @brief Recebe do socket e fica contando tempo com timestamp para dar timeout após 5 segundos
  * 
  * @param socket        Socket a receber
  * @param buffer        Buffer de mensagem
@@ -122,7 +122,7 @@ int recebe(int socket, unsigned char *buffer, int tam_buffer){
       if(bytes_lidos > 0 && buffer[0] == 126){
          return bytes_lidos;
       }
-   } while(timestamp() - comeco <= 5000);
+   } while(timestamp() - comeco <= 5000); // timeout apos 5 seg de espera
    return -1;
 }
 
@@ -170,6 +170,7 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
    // Calcula paridade par
    buffer[66] = calcula_paridade(buffer, p.tam);
 
+   // Adiciona 0xff após cada byte pra evitar placas de rede malvadas
    int i = 0;
    int j = 0;
    while(i < 134){
@@ -186,6 +187,7 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
       //Aguarda resposta
       while(1){
          if (recebe(socket, buffer_respostaD, sizeof(buffer_respostaD)) > 0){
+            // Retira 0xff do pacote, já que são inúteis agora
             int i = 0;
             int j = 0;
             while(i < 134){
@@ -195,7 +197,9 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
                j+=2;
             }
             
+            // Copia array de bytes recebidos para uma struct
             memcpy(&resposta, buffer_resposta, 3);
+
             if(resposta.ini == 126){
                // Caso paridade não bata, manda nack
                if(buffer_resposta[66] != calcula_paridade(buffer_resposta, resposta.tam)){
@@ -252,7 +256,7 @@ int envia(int socket, unsigned char *dados, int tam, int tipo, seq_t *seq, int w
 
 
 /**
- * @brief Recupera arquivo(s)
+ * @brief Recupera arquivo(s) do servidor
  * 
  * @param socket     Socket de rede
  * @param seq        Estrutura de sesquência
@@ -272,6 +276,7 @@ void recuperaArquivo(int socket, seq_t *seq, char* arquivo, int varios){
 
    while(!fim){
       if(recv(socket, buffRecoverD, sizeof(buffRecoverD), 0) > 0){
+         // Retira 0xff do pacote, já que são inúteis agora
          int i = 0;
          int j = 0;
          while(i < 134){
@@ -281,7 +286,9 @@ void recuperaArquivo(int socket, seq_t *seq, char* arquivo, int varios){
             j+=2;
          }
 
+         // Copia array de bytes recebidos para uma struct
          memcpy(&packRecover, buffRecover, 3);
+
          // Caso paridade não bata, manda nack
          if(packRecover.ini == 126){
             if(buffRecover[66] != calcula_paridade(buffRecover, packRecover.tam)){
@@ -291,6 +298,7 @@ void recuperaArquivo(int socket, seq_t *seq, char* arquivo, int varios){
             else if ( mensagem_anterior(servidor, seq, packRecover.seq, packRecover.tipo) ){
                envia(socket, NULL, 0, T_ACK, NULL, 0, 0, NULL);
             }
+            // Deu certo
             else if(packRecover.seq == seq->server){
                switch(packRecover.tipo){
                   case T_NOME_ARQ_REC:
@@ -371,6 +379,7 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
       return -1;
    }
 
+   // Le um arquivo de 63 em 63 bytes (tamanho máximo de cada pacote)
    for(int i = 0; i < tamanho - tamanho%63; i+=63){
       tam_read = fread(buff, sizeof(unsigned char), 63, arq);
       
@@ -380,6 +389,7 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
       envia(socket, buff, tam_read, T_DADOS, seq, 1, T_ACK, NULL);
    }
 
+   // Caso arquivo tenha tamanho que não é mulitplo de 63, manda o resto aqui
    tam_read = fread(buff, sizeof(unsigned char), tamanho%63, arq);
    if(tam_read > 0){
       clearLines();
@@ -393,7 +403,7 @@ int enviaArquivo(int socket, char *arquivo, seq_t *seq){
 }
 
 /**
- * @brief Escreve partes de um arquivo
+ * @brief Escreve partes de um arquivo recebidas, ou seja, abre arquivo em modo de append
  * 
  * @param arquivo Caminho para o arquivo
  * @param dados Vetor com dados do pacote
